@@ -33,18 +33,18 @@ PRD is source of truth; if my instructions conflict with it, ask me.
 - Python 3.11.9 (`py -3.11`; the bare `python` on this box is 3.14 — don't use it)
 - Installed (exact, see requirements.txt for full lock):
   langgraph==1.2.9, langchain-core==1.4.9, chromadb==1.5.9,
-  pydantic==2.13.4, pytest==9.1.1, groq==1.5.0, google-genai==2.12.1
-- Gemini SDK is `google-genai` (unified, current), NOT the deprecated
-  `google-generativeai`. Client: genai.Client(api_key=).models.generate_content(
-  config=types.GenerateContentConfig(response_mime_type="application/json")).
+  pydantic==2.13.4, pytest==9.1.1, groq==1.5.0, mistralai==2.7.0
+- Mistral SDK entry point is `from mistralai.client import Mistral` (v2.x
+  layout — NO top-level export). Client: Mistral(api_key=).chat.complete(
+  model=, messages=[...], response_format={"type":"json_object"}).
 - chromadb (local persistent client, default embeddings), sqlite3 stdlib
   (SQLAlchemy optional), fastapi + sse-starlette + uvicorn, pydantic v2
   -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6). chromadb installed
   but UNUSED until Day 3 (memories are a stub sqlite table; migrate then).
 - LLMs: Groq llama-3.3-70b-versatile for DIALOGUE + NARRATOR (speed/quality),
-  Gemini gemini-2.0-flash for BATCHED PLANNING + importance scoring (JSON
+  Mistral mistral-small-latest for BATCHED PLANNING + importance scoring (JSON
   reliability, separate quota pool). All via sim/llm/client.py with backoff,
-  fallback (groq↔gemini), and the per-day budget counter.
+  fallback (groq↔mistral), and the per-day budget counter.
 - Frontend: Next.js 14 + Tailwind, SVG map. NO Phaser, NO game engine.
 - After install, record exact versions here + requirements.txt. Verify
   LangGraph and chromadb APIs against installed versions before coding.
@@ -73,7 +73,7 @@ ghost-town/
   .env.example
 
 ## Env vars
-GROQ_API_KEY, GEMINI_API_KEY
+GROQ_API_KEY, MISTRAL_API_KEY
 
 ## Seeding (PRD §9 Day-7 tip — bake it in from Day 1)
 8 agents with FLAMMABLE relations: merchant owes farmer money; baker and

@@ -31,11 +31,11 @@ def test_retry_exhausted_propagates(monkeypatch):
 
 def test_fallback_to_other_provider(monkeypatch):
     def boom(*a):
-        raise LLMUnavailable("no gemini key")
+        raise LLMUnavailable("no mistral key")
 
-    monkeypatch.setattr(client, "_gemini", boom)
+    monkeypatch.setattr(client, "_mistral", boom)
     monkeypatch.setattr(client, "_groq", lambda prompt, model, temp, jm: ('{"x": 9}', 7))
-    assert complete("p", purpose="t", provider="gemini") == '{"x": 9}'
+    assert complete("p", purpose="t", provider="mistral") == '{"x": 9}'
 
 
 def test_all_providers_fail_raises(monkeypatch):
@@ -44,10 +44,10 @@ def test_all_providers_fail_raises(monkeypatch):
     def boom(*a):
         raise RuntimeError("transient")
 
-    monkeypatch.setattr(client, "_gemini", boom)
+    monkeypatch.setattr(client, "_mistral", boom)
     monkeypatch.setattr(client, "_groq", boom)
     with pytest.raises(LLMUnavailable):
-        complete("p", purpose="t", provider="gemini")
+        complete("p", purpose="t", provider="mistral")
 
 
 def test_budget_counts_and_rolls_over():

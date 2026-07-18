@@ -106,8 +106,8 @@ def plan(world, tick_ctx: dict, budget) -> dict:
     try:
         batch = client.complete_json(
             _build_prompt(world, tick_ctx, agents), BatchPlan,
-            purpose="planning", provider="gemini",
-            model="gemini-2.0-flash", temperature=0.2)
+            purpose="planning", provider="mistral",
+            model="mistral-small-latest", temperature=0.2)
         budget.spend(day)              # count only a successful planning call
         raw = batch.root
     except (LLMUnavailable, ValueError) as e:

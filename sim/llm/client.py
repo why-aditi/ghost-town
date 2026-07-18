@@ -1,9 +1,9 @@
-"""LLM client: Groq + Gemini, JSON-mode + pydantic validation, backoff,
+"""LLM client: Groq + Mistral, JSON-mode + pydantic validation, backoff,
 cross-provider fallback, and the per-day budget counter (CLAUDE.md).
 
 Everything goes through complete_json / complete so logging, retries, and
 fallback happen in one place. Provider functions are resolved at call time,
-so tests monkeypatch `_gemini` / `_groq` / `complete_json` directly.
+so tests monkeypatch `_mistral` / `_groq` / `complete_json` directly.
 """
 import logging
 import os
@@ -14,9 +14,9 @@ from pydantic import BaseModel, ValidationError
 
 log = logging.getLogger("sim.llm")
 
-# Model assignment per CLAUDE.md: Gemini plans/scores, Groq talks/narrates.
-_DEFAULT_MODEL = {"gemini": "gemini-2.0-flash", "groq": "llama-3.3-70b-versatile"}
-_FALLBACK = {"gemini": "groq", "groq": "gemini"}
+# Model assignment per CLAUDE.md: Mistral plans/scores, Groq talks/narrates.
+_DEFAULT_MODEL = {"mistral": "mistral-small-latest", "groq": "llama-3.3-70b-versatile"}
+_FALLBACK = {"mistral": "groq", "groq": "mistral"}
 
 
 class LLMUnavailable(RuntimeError):
@@ -39,20 +39,18 @@ _load_dotenv()
 
 
 # --- provider wrappers: (text, tokens) ---
-def _gemini(prompt: str, model: str, temperature: float, json_mode: bool):
-    from google import genai
-    from google.genai import types
-    key = os.getenv("GEMINI_API_KEY")
+def _mistral(prompt: str, model: str, temperature: float, json_mode: bool):
+    from mistralai.client import Mistral
+    key = os.getenv("MISTRAL_API_KEY")
     if not key:
-        raise LLMUnavailable("GEMINI_API_KEY not set")
-    client = genai.Client(api_key=key)
-    cfg = types.GenerateContentConfig(
-        temperature=temperature,
-        response_mime_type="application/json" if json_mode else "text/plain",
-    )
-    r = client.models.generate_content(model=model, contents=prompt, config=cfg)
-    tokens = getattr(getattr(r, "usage_metadata", None), "total_token_count", None)
-    return r.text, tokens
+        raise LLMUnavailable("MISTRAL_API_KEY not set")
+    client = Mistral(api_key=key)
+    kw = {"response_format": {"type": "json_object"}} if json_mode else {}
+    r = client.chat.complete(
+        model=model, temperature=temperature,
+        messages=[{"role": "user", "content": prompt}], **kw)
+    tokens = getattr(getattr(r, "usage", None), "total_tokens", None)
+    return r.choices[0].message.content, tokens
 
 
 def _groq(prompt: str, model: str, temperature: float, json_mode: bool):
@@ -71,7 +69,7 @@ def _groq(prompt: str, model: str, temperature: float, json_mode: bool):
 
 def _provider_fn(name: str):
     # Resolved from module globals at call time → monkeypatchable in tests.
-    return {"gemini": _gemini, "groq": _groq}[name]
+    return {"mistral": _mistral, "groq": _groq}[name]
 
 
 def _is_rate_limit(e: Exception) -> bool:
@@ -104,12 +102,12 @@ def _one_call(provider: str, purpose: str, prompt: str, model: str | None,
     return text
 
 
-def complete(prompt: str, *, purpose: str, provider: str = "gemini",
+def complete(prompt: str, *, purpose: str, provider: str = "mistral",
              model: str | None = None, temperature: float = 0.2,
              json_mode: bool = True) -> str:
     """Call `provider`; on failure fall back to the other provider. Raises
     LLMUnavailable only if both fail. (Fallback uses the other provider's
-    default model — a gemini model id won't run on groq.)"""
+    default model — a mistral model id won't run on groq.)"""
     last = None
     for i, p in enumerate((provider, _FALLBACK[provider])):
         try:
@@ -123,7 +121,7 @@ def complete(prompt: str, *, purpose: str, provider: str = "gemini",
 
 
 def complete_json(prompt: str, schema: type[BaseModel], *, purpose: str,
-                  provider: str = "gemini", model: str | None = None,
+                  provider: str = "mistral", model: str | None = None,
                   temperature: float = 0.2) -> BaseModel:
     """complete() + pydantic validation + ONE retry with error feedback."""
     text = complete(prompt, purpose=purpose, provider=provider, model=model,
