@@ -31,14 +31,16 @@ PRD is source of truth; if my instructions conflict with it, ask me.
 
 ## Stack & pinned versions
 - Python 3.11.9 (`py -3.11`; the bare `python` on this box is 3.14 — don't use it)
-- Installed Day 1 (exact, see requirements.txt for full lock):
+- Installed (exact, see requirements.txt for full lock):
   langgraph==1.2.9, langchain-core==1.4.9, chromadb==1.5.9,
-  pydantic==2.13.4, pytest==9.1.1
+  pydantic==2.13.4, pytest==9.1.1, groq==1.5.0, google-genai==2.12.1
+- Gemini SDK is `google-genai` (unified, current), NOT the deprecated
+  `google-generativeai`. Client: genai.Client(api_key=).models.generate_content(
+  config=types.GenerateContentConfig(response_mime_type="application/json")).
 - chromadb (local persistent client, default embeddings), sqlite3 stdlib
   (SQLAlchemy optional), fastapi + sse-starlette + uvicorn, pydantic v2
-  -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6); groq/gemini SDKs
-  NOT installed yet (Day 2). chromadb installed but UNUSED in Phase 1
-  (memories are a stub sqlite table; migrate to ChromaDB Day 3).
+  -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6). chromadb installed
+  but UNUSED until Day 3 (memories are a stub sqlite table; migrate then).
 - LLMs: Groq llama-3.3-70b-versatile for DIALOGUE + NARRATOR (speed/quality),
   Gemini gemini-2.0-flash for BATCHED PLANNING + importance scoring (JSON
   reliability, separate quota pool). All via sim/llm/client.py with backoff,

@@ -44,6 +44,14 @@ class World:
     def positions(self) -> dict[str, str]:
         return {a["id"]: a["position"] for a in self.db.get_agents()}
 
+    def relationships(self, agent_id: str) -> list[dict]:
+        return self.db.get_relationships(agent_id)
+
+    def recent_memories(self, agent_id: str, k: int = 3) -> list[dict]:
+        # ponytail: temporal last-k placeholder; Day 3 swaps in scored ChromaDB
+        # retrieval (alpha*relevance + beta*recency + gamma*importance).
+        return self.db.get_memories(agent_id)[-k:]
+
     # --- validated mutations ---
     def move_agent(self, agent_id: str, zone: str) -> None:
         """Direct move. Raises on illegal input (programmer error)."""

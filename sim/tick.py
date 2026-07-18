@@ -9,6 +9,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from sim.llm.client import LLMBudget
 from sim.models import TickReport
 from sim.phases import act as act_phase
 from sim.phases import converse as converse_phase
@@ -21,10 +22,12 @@ from sim.world import World
 class TickState(TypedDict, total=False):
     world: World
     rng: random.Random
+    budget: LLMBudget
     tick_ctx: dict
     plans: dict
-    moves: dict
     rejected: list
+    quiet: bool
+    moves: dict
     dialogues: list
     memories: list
     narration: str
@@ -32,18 +35,19 @@ class TickState(TypedDict, total=False):
 
 
 def _plan(s: TickState) -> dict:
-    plans = plan_phase.plan(s["world"], s["tick_ctx"], s["rng"])
-    return {"plans": plans, "trace": s["trace"] + ["plan"]}
+    res = plan_phase.plan(s["world"], s["tick_ctx"], s["budget"])
+    return {"plans": res["plans"], "rejected": res["rejected"],
+            "quiet": res["quiet"], "trace": s["trace"] + ["plan"]}
 
 
 def _act(s: TickState) -> dict:
     res = act_phase.act(s["world"], s["plans"])
-    return {"moves": res["moves"], "rejected": res["rejected"],
-            "trace": s["trace"] + ["act"]}
+    return {"moves": res["moves"], "trace": s["trace"] + ["act"]}
 
 
 def _converse(s: TickState) -> dict:
-    dialogues = converse_phase.converse(s["world"])
+    # Quiet tick (budget exhausted): no conversations (CLAUDE.md).
+    dialogues = [] if s["quiet"] else converse_phase.converse(s["world"])
     return {"dialogues": dialogues, "trace": s["trace"] + ["converse"]}
 
 
@@ -75,7 +79,7 @@ def _build_graph():
 GRAPH = _build_graph()
 
 
-def run_tick(world: World, rng: random.Random) -> TickReport:
+def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
     """Run one full tick against the current world clock. Returns a report.
 
     Does NOT advance the clock — cli.py advances after rendering so the report
@@ -84,17 +88,19 @@ def run_tick(world: World, rng: random.Random) -> TickReport:
     w = world.state()
     tick_ctx = {"tick": w["tick"], "time_slot": w["time_slot"], "day": w["day"]}
     final = GRAPH.invoke({
-        "world": world, "rng": rng, "tick_ctx": tick_ctx, "trace": [],
-        "plans": {}, "moves": {}, "rejected": [], "dialogues": [],
-        "memories": [], "narration": "",
+        "world": world, "rng": rng, "budget": budget, "tick_ctx": tick_ctx,
+        "trace": [], "plans": {}, "rejected": [], "quiet": False, "moves": {},
+        "dialogues": [], "memories": [], "narration": "",
     })
     return TickReport(
         tick=tick_ctx["tick"],
         time_slot=tick_ctx["time_slot"],
         day=tick_ctx["day"],
+        planned=final["plans"],
         moves=final["moves"],
         rejected=final["rejected"],
         conversations=[tuple(d.participants) for d in final["dialogues"]],
         narration=final["narration"],
-        llm_calls=0,
+        quiet=final["quiet"],
+        llm_calls=0 if final["quiet"] else 1,
     )

@@ -7,8 +7,9 @@ import argparse
 import random
 import sys
 
-from sim.tick import run_tick
+from sim.llm.client import LLMBudget
 from sim.personas import ZONES
+from sim.tick import run_tick
 from sim.world import World
 
 _COLS = 4          # zones per map row
@@ -40,13 +41,16 @@ def render_map(world: World) -> str:
 
 def render_report(report) -> str:
     convos = ", ".join(f"{a}-{b}" for a, b in report.conversations) or "none"
+    quiet = "  [QUIET TICK]" if report.quiet else ""
     out = [
         f"── Tick {report.tick}  (day {report.day}, {report.time_slot})  "
-        f"llm_calls={report.llm_calls} ──",
+        f"llm_calls={report.llm_calls}{quiet} ──",
         report.narration,
-        f"moves: {len(report.moves)}   rejected: {len(report.rejected)}   "
-        f"conversations: {convos}",
     ]
+    for aid, p in sorted(report.planned.items()):
+        flag = " ✗" if aid in report.rejected else ""
+        out.append(f"  {aid:<7} → {p.destination:<7} [{p.action}]{flag}: {p.reason}")
+    out.append(f"conversations: {convos}")
     return "\n".join(out)
 
 
@@ -60,9 +64,10 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")  # box-drawing chars on Windows cp1252
     world = World.new(args.db)
     rng = random.Random(args.seed)
+    budget = LLMBudget()
 
     for _ in range(args.ticks):
-        report = run_tick(world, rng)
+        report = run_tick(world, rng, budget)
         print(render_report(report))
         print(render_map(world))
         print()

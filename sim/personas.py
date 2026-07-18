@@ -7,9 +7,20 @@ Data, not prose blobs. World state is built from this at first run.
 # ponytail: zones never change at runtime; add a table only if that changes.
 ZONES = ["homes", "cafe", "market", "farm", "well", "square", "bakery", "forge"]
 
-# Legal stub actions a plan may carry. Movement is decided by `destination`;
-# `action` is flavor recorded on the plan. Real action verbs arrive Day 2+.
+# Legal actions a plan may carry. Movement is decided by `destination`;
+# `action` is flavor recorded on the plan.
 LEGAL_ACTIONS = ["work", "wander", "go_home", "idle"]
+
+# Where each occupation works — nudges morning-to-work behavior in planning.
+WORKPLACE = {
+    "merchant": "market",
+    "farmer": "farm",
+    "baker": "bakery",
+    "blacksmith": "forge",
+    "cafe owner": "cafe",
+    "well-keeper": "well",
+    "gossip": "square",
+}
 
 
 # Each agent: id, name, occupation, home_zone, traits, daily_goals, secrets,

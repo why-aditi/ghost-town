@@ -5,7 +5,7 @@ reports. LLMs will (Day 2+) emit AgentPlan/Dialogue as JSON validated here.
 """
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 MemoryType = Literal["observation", "conversation", "reflection"]
 
@@ -16,6 +16,17 @@ class AgentPlan(BaseModel):
     destination: str          # a zone id; validated against ZONES on apply
     action: str               # one of LEGAL_ACTIONS; flavor, not movement
     reason: str
+
+
+class PlannedAction(BaseModel):
+    """The LLM's decision for one agent (agent_id is the dict key, not here)."""
+    destination: str
+    action: str
+    reason: str
+
+
+class BatchPlan(RootModel[dict[str, PlannedAction]]):
+    """Batched-mind output: JSON keyed by agent_id. One call plans everyone."""
 
 
 class MemoryEntry(BaseModel):
@@ -46,8 +57,10 @@ class TickReport(BaseModel):
     tick: int
     time_slot: str
     day: int
+    planned: dict[str, AgentPlan] = {}  # final decision per agent (post anti-bleed)
     moves: dict[str, str] = {}          # agent_id -> destination applied
-    rejected: list[str] = []            # agent_ids whose plan was rejected
+    rejected: list[str] = []            # agent_ids whose plan was rejected/defaulted
     conversations: list[tuple[str, str]] = []
     narration: str = ""
-    llm_calls: int = 0                  # always 0 in Phase 1 (stub minds)
+    quiet: bool = False                 # budget exceeded -> quiet tick, no planning call
+    llm_calls: int = 0
