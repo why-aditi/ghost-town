@@ -2,7 +2,19 @@
 import pytest
 
 from sim.models import AgentPlan
-from sim.tests.util import new_world as fresh
+from sim.tests.util import FakeEmbed, new_world as fresh, unique_prefix
+from sim.world import World
+
+
+def test_memory_reseeds_on_reload(tmp_path):
+    """Reload path: sqlite already seeded but the (ephemeral) memory store is
+    fresh -> memory must re-seed, guarded by emptiness not sqlite state."""
+    db = str(tmp_path / "w.sqlite")
+    w1 = World.new(db, embedding_function=FakeEmbed(), collection_prefix=unique_prefix())
+    assert w1.memory.all("odette")                  # seeded on first run
+    assert w1.db.is_seeded()
+    w2 = World.new(db, embedding_function=FakeEmbed(), collection_prefix=unique_prefix())
+    assert w2.memory.all("odette")                  # re-seeded despite sqlite seeded
 
 
 def test_valid_move_applied():

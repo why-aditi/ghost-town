@@ -1,10 +1,12 @@
 """Retrieval scoring math (fixed inputs, no embeddings) + a chroma round-trip
 with the fake embedder."""
-import tempfile
-
 from sim import config
 from sim.phases.memory import MemoryStore, rank_memories, retrieval_score
-from sim.tests.util import FakeEmbed
+from sim.tests.util import FakeEmbed, unique_prefix
+
+
+def _store() -> MemoryStore:
+    return MemoryStore(embedding_function=FakeEmbed(), collection_prefix=unique_prefix())
 
 
 def test_retrieval_score_formula():
@@ -36,7 +38,7 @@ def test_relevance_dominates_over_importance():
 
 
 def test_add_retrieve_roundtrip():
-    store = MemoryStore(path=tempfile.mkdtemp(), embedding_function=FakeEmbed())
+    store = _store()
     store.add("odette", "the old mine collapse was no accident", "observation", 0, 9)
     store.add("odette", "i drew water from the well this morning", "observation", 1, 2)
     top = store.retrieve("odette", "what happened at the mine", k=1, now_tick=1)
@@ -45,5 +47,5 @@ def test_add_retrieve_roundtrip():
 
 
 def test_retrieve_empty_collection():
-    store = MemoryStore(path=tempfile.mkdtemp(), embedding_function=FakeEmbed())
+    store = _store()
     assert store.retrieve("nobody", "anything", k=3, now_tick=0) == []

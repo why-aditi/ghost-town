@@ -44,6 +44,12 @@ PRD is source of truth; if my instructions conflict with it, ask me.
 - chroma EmbeddingFunction interface (1.5.x): __call__ + embed_query + static
   name() + get_config(); default embeddings download all-MiniLM-L6-v2 (~80MB)
   to ~/.cache/chroma on first real run. Tests inject a fake embedder.
+- MEMORY IS EPHEMERAL in v1: chromadb PersistentClient crashes on query with
+  "Error creating hnsw segment reader: Nothing found on disk" under real
+  timing (Windows disk-flush race). Persistent memory = P1 (save/load). --db
+  persists sqlite world state; memory re-seeds each run. Tests use ephemeral
+  chroma + a unique collection_prefix per store for isolation (EphemeralClient
+  shares global state) — also keeps the suite fast (no disk).
 - chromadb (local persistent client, default embeddings), sqlite3 stdlib
   (SQLAlchemy optional), fastapi + sse-starlette + uvicorn, pydantic v2
   -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6). chromadb installed

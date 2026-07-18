@@ -33,14 +33,16 @@ class MemoryStore:
     (tests/`:memory:` runs). `embedding_function=None` -> Chroma default
     (local ONNX MiniLM); tests inject a fast deterministic embedder."""
 
-    def __init__(self, path: str | None = None, embedding_function=None):
+    def __init__(self, path: str | None = None, embedding_function=None,
+                 collection_prefix: str = ""):
         self.client = chromadb.PersistentClient(path) if path else chromadb.EphemeralClient()
         self.ef = embedding_function
+        self.prefix = collection_prefix  # tests use a unique prefix for isolation
         self._n = 0  # id counter (uniqueness only; not ranking-relevant)
 
     def _coll(self, agent_id: str):
         return self.client.get_or_create_collection(
-            f"memories_{agent_id}", metadata={"hnsw:space": "cosine"},
+            f"{self.prefix}memories_{agent_id}", metadata={"hnsw:space": "cosine"},
             embedding_function=self.ef)
 
     def add(self, agent_id: str, text: str, mtype: str, tick: int, importance: int) -> None:

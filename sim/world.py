@@ -20,13 +20,18 @@ class World:
 
     @classmethod
     def new(cls, db_path: str = ":memory:", memory_path: str | None = None,
-            embedding_function=None, agents: list[dict] = AGENTS) -> "World":
-        w = cls(DB(db_path), MemoryStore(memory_path, embedding_function))
+            embedding_function=None, collection_prefix: str = "",
+            agents: list[dict] = AGENTS) -> "World":
+        w = cls(DB(db_path), MemoryStore(memory_path, embedding_function, collection_prefix))
         if not w.db.is_seeded():
-            w._seed(agents)
+            w._seed_state(agents)
+        # Memory is ephemeral in v1 (persistent memory = P1), so seed it per
+        # run — guarded by emptiness, not by sqlite state, so it's idempotent.
+        if not w.memory.all(agents[0]["id"]):
+            w._seed_memories(agents)
         return w
 
-    def _seed(self, agents: list[dict]) -> None:
+    def _seed_state(self, agents: list[dict]) -> None:
         self.db.set_world(tick=0, time_slot=_TIME_SLOTS[0], day=0)
         for a in agents:
             self.db.insert_agent(a)
@@ -34,7 +39,9 @@ class World:
             for rel in a["initial_relationships"]:
                 self.db.insert_relationship(a["id"], rel["other"], rel["sentiment"],
                                             rel["summary"], tick=0)
-        # Seed memories: an agent starts knowing their own secrets + relationships.
+
+    def _seed_memories(self, agents: list[dict]) -> None:
+        # An agent starts knowing their own secrets + relationships.
         for a in agents:
             for secret in a["secrets"]:
                 self.memory.add(a["id"], secret, "observation", 0, config.SEED_SECRET_IMPORTANCE)

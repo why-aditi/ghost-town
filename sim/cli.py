@@ -83,14 +83,16 @@ def main() -> None:
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # box-drawing chars on Windows cp1252
-    # Persistent memory lives beside a file db; :memory: db -> ephemeral chroma.
-    memory_path = None if args.db == ":memory:" else args.db + ".chroma"
-    world = World.new(args.db, memory_path=memory_path)
+    # Memory is ephemeral in v1 (persistent chroma = P1 save/load). --db still
+    # persists world state (tick, positions, events, story) across runs.
+    world = World.new(args.db, memory_path=None)
     rng = random.Random(args.seed)
     budget = LLMBudget(config.BUDGET_PER_DAY)
 
     if args.inject:
         zone, desc = args.inject
+        if zone not in world.zones:
+            sys.exit(f"error: unknown zone '{zone}'. valid zones: {', '.join(ZONES)}")
         world.inject_event(zone, desc, source="user")
         print(f"[injected @ {zone}] {desc}\n")
 

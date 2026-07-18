@@ -1,16 +1,22 @@
 """Test helpers: a deterministic offline embedder + isolated world factory.
 
-ChromaDB's EphemeralClient shares global state across instances, so each test
-world gets its own temp persistent dir. The fake embedder is a stable
-bag-of-words hash — no ONNX model download, and word overlap drives cosine
+Tests use EPHEMERAL chroma (in-memory) to avoid the PersistentClient HNSW
+disk-flush bug. EphemeralClient shares global state across instances, so each
+store gets a UNIQUE collection prefix for isolation. The fake embedder is a
+stable bag-of-words hash — no ONNX download, and word overlap drives cosine
 distance so retrieval ranking is meaningful in tests.
 """
+import itertools
 import re
-import tempfile
 
 from chromadb.api.types import EmbeddingFunction
 
 _DIM = 64
+_prefix = itertools.count()
+
+
+def unique_prefix() -> str:
+    return f"t{next(_prefix)}_"
 
 
 def _vec(text: str) -> list[float]:
@@ -45,7 +51,7 @@ class FakeEmbed(EmbeddingFunction):
 
 
 def new_world():
-    """A seeded world with an isolated, offline memory store."""
+    """A seeded world with an isolated, offline (ephemeral) memory store."""
     from sim.world import World
-    return World.new(":memory:", memory_path=tempfile.mkdtemp(),
-                     embedding_function=FakeEmbed())
+    return World.new(":memory:", embedding_function=FakeEmbed(),
+                     collection_prefix=unique_prefix())
