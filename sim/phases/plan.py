@@ -7,6 +7,7 @@ their current activity (stay put) with no LLM call and no conversations.
 import logging
 import re
 
+from sim import config
 from sim.llm import client
 from sim.llm.client import LLMUnavailable
 from sim.models import AgentPlan, BatchPlan
@@ -55,7 +56,13 @@ def validate_no_bleed(agent: dict, plan: AgentPlan,
     return True, None
 
 
-def _build_prompt(world, tick_ctx: dict, agents: list[dict]) -> str:
+def _query(agent: dict, tick_ctx: dict) -> str:
+    """Retrieval query for an agent: their goals + the current time-slot."""
+    return "; ".join(agent["daily_goals"]) + f" at {tick_ctx['time_slot']}"
+
+
+def _build_prompt(world, tick_ctx: dict, agents: list[dict],
+                  retrieved: dict[str, list[dict]]) -> str:
     occ: dict[str, list[str]] = {}
     for a in agents:
         occ.setdefault(a["position"], []).append(a["name"])
@@ -77,7 +84,7 @@ def _build_prompt(world, tick_ctx: dict, agents: list[dict]) -> str:
 
     sections = []
     for a in agents:
-        mems = world.recent_memories(a["id"], 3)
+        mems = retrieved[a["id"]]
         mem_lines = "\n".join(f"  - {m['text']}" for m in mems) or "  - (no memories yet)"
         secrets = "; ".join(a["secrets"]) or "(none)"
         sections.append(
@@ -103,9 +110,15 @@ def plan(world, tick_ctx: dict, budget) -> dict:
                  for a in agents}
         return {"plans": plans, "rejected": [], "quiet": True}
 
+    # Retrieve each agent's top-3 memories once; reused for the prompt AND the
+    # anti-bleed known-set (an agent may only reference what's in their prompt).
+    now = tick_ctx["tick"]
+    retrieved = {a["id"]: world.memory.retrieve(a["id"], _query(a, tick_ctx),
+                                                config.TOP_K_PLAN, now) for a in agents}
+
     try:
         batch = client.complete_json(
-            _build_prompt(world, tick_ctx, agents), BatchPlan,
+            _build_prompt(world, tick_ctx, agents, retrieved), BatchPlan,
             purpose="planning", provider="mistral",
             model="mistral-small-latest", temperature=0.2)
         budget.spend(day)              # count only a successful planning call
@@ -136,7 +149,7 @@ def plan(world, tick_ctx: dict, budget) -> dict:
             plans[aid] = _safe_default(a, f"(illegal {cand.destination}/{cand.action}) defaulted")
             rejected.append(aid)
             continue
-        mems = [m["text"] for m in world.recent_memories(aid, 3)]
+        mems = [m["text"] for m in retrieved[aid]]
         known = _tokens(a["name"], a["occupation"], *a["traits"], *a["daily_goals"],
                         *a["secrets"], *[r["summary"] for r in world.relationships(aid)],
                         *mems) | public

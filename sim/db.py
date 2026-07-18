@@ -44,15 +44,8 @@ CREATE TABLE IF NOT EXISTS story_log (
     tick INTEGER NOT NULL,
     prose TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS memories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    agent_id TEXT NOT NULL,
-    text TEXT NOT NULL,
-    type TEXT NOT NULL,
-    importance INTEGER NOT NULL,
-    tick INTEGER NOT NULL
-);
 """
+# Memories live in ChromaDB (per-agent collections), not sqlite — see phases/memory.py.
 
 
 class DB:
@@ -140,19 +133,6 @@ class DB:
 
     def get_story(self) -> list[dict]:
         rows = self.conn.execute("SELECT tick, prose FROM story_log ORDER BY rowid").fetchall()
-        return [dict(r) for r in rows]
-
-    # --- memories (stub stream; → ChromaDB Day 3) ---
-    def add_memory(self, agent_id: str, text: str, mtype: str, importance: int, tick: int) -> None:
-        self.conn.execute(
-            "INSERT INTO memories (agent_id, text, type, importance, tick) VALUES (?,?,?,?,?)",
-            (agent_id, text, mtype, importance, tick))
-        self.conn.commit()
-
-    def get_memories(self, agent_id: str) -> list[dict]:
-        rows = self.conn.execute(
-            "SELECT text, type, importance, tick FROM memories WHERE agent_id = ? "
-            "ORDER BY id", (agent_id,)).fetchall()
         return [dict(r) for r in rows]
 
     def is_seeded(self) -> bool:

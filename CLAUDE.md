@@ -37,6 +37,13 @@ PRD is source of truth; if my instructions conflict with it, ask me.
 - Mistral SDK entry point is `from mistralai.client import Mistral` (v2.x
   layout — NO top-level export). Client: Mistral(api_key=).chat.complete(
   model=, messages=[...], response_format={"type":"json_object"}).
+- OTEL PIN GOTCHA: chromadb needs the opentelemetry stack aligned at 1.44.0
+  (api+sdk+semantic-conventions==0.65b0); mistralai's semconv<0.61 pin is
+  conservative but works. On a fresh install, if chromadb import fails with
+  `_ON_EMIT_RECURSION_COUNT_KEY`, run: pip install "opentelemetry-sdk==1.44.0".
+- chroma EmbeddingFunction interface (1.5.x): __call__ + embed_query + static
+  name() + get_config(); default embeddings download all-MiniLM-L6-v2 (~80MB)
+  to ~/.cache/chroma on first real run. Tests inject a fake embedder.
 - chromadb (local persistent client, default embeddings), sqlite3 stdlib
   (SQLAlchemy optional), fastapi + sse-starlette + uvicorn, pydantic v2
   -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6). chromadb installed

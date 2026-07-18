@@ -3,21 +3,25 @@
 LLM-PROPOSES / CODE-DISPOSES (CLAUDE.md): plans are proposals; apply_plan
 validates and either applies or rejects. Nothing else touches positions.
 """
+from sim import config
 from sim.db import DB
 from sim.models import AgentPlan
 from sim.personas import AGENTS, LEGAL_ACTIONS, ZONES
+from sim.phases.memory import MemoryStore
 
 _TIME_SLOTS = ["morning", "afternoon", "evening"]
 
 
 class World:
-    def __init__(self, db: DB):
+    def __init__(self, db: DB, memory: MemoryStore):
         self.db = db
+        self.memory = memory
         self.zones = set(ZONES)
 
     @classmethod
-    def new(cls, db_path: str = ":memory:", agents: list[dict] = AGENTS) -> "World":
-        w = cls(DB(db_path))
+    def new(cls, db_path: str = ":memory:", memory_path: str | None = None,
+            embedding_function=None, agents: list[dict] = AGENTS) -> "World":
+        w = cls(DB(db_path), MemoryStore(memory_path, embedding_function))
         if not w.db.is_seeded():
             w._seed(agents)
         return w
@@ -30,6 +34,12 @@ class World:
             for rel in a["initial_relationships"]:
                 self.db.insert_relationship(a["id"], rel["other"], rel["sentiment"],
                                             rel["summary"], tick=0)
+        # Seed memories: an agent starts knowing their own secrets + relationships.
+        for a in agents:
+            for secret in a["secrets"]:
+                self.memory.add(a["id"], secret, "observation", 0, config.SEED_SECRET_IMPORTANCE)
+            for rel in a["initial_relationships"]:
+                self.memory.add(a["id"], rel["summary"], "observation", 0, config.SEED_REL_IMPORTANCE)
 
     # --- reads ---
     def state(self) -> dict:
@@ -46,11 +56,6 @@ class World:
 
     def relationships(self, agent_id: str) -> list[dict]:
         return self.db.get_relationships(agent_id)
-
-    def recent_memories(self, agent_id: str, k: int = 3) -> list[dict]:
-        # ponytail: temporal last-k placeholder; Day 3 swaps in scored ChromaDB
-        # retrieval (alpha*relevance + beta*recency + gamma*importance).
-        return self.db.get_memories(agent_id)[-k:]
 
     # --- validated mutations ---
     def move_agent(self, agent_id: str, zone: str) -> None:
@@ -89,11 +94,6 @@ class World:
 
     def events_at(self, zone: str) -> list[dict]:
         return self.db.events_at(zone)
-
-    def add_memory(self, agent_id: str, text: str, mtype: str = "observation",
-                   importance: int = 1) -> None:
-        tick = self.db.get_world()["tick"]
-        self.db.add_memory(agent_id, text, mtype, importance, tick)
 
     def add_story(self, tick: int, prose: str) -> None:
         self.db.add_story(tick, prose)

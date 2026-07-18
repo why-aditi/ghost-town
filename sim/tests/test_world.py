@@ -2,11 +2,7 @@
 import pytest
 
 from sim.models import AgentPlan
-from sim.world import World
-
-
-def fresh() -> World:
-    return World.new(":memory:")
+from sim.tests.util import new_world as fresh
 
 
 def test_valid_move_applied():

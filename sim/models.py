@@ -29,6 +29,10 @@ class BatchPlan(RootModel[dict[str, PlannedAction]]):
     """Batched-mind output: JSON keyed by agent_id. One call plans everyone."""
 
 
+class ImportanceScores(RootModel[dict[str, int]]):
+    """Batched importance scoring: {memory_index (as str): score 1-10}."""
+
+
 class MemoryEntry(BaseModel):
     agent_id: str
     text: str

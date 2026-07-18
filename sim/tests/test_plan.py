@@ -3,7 +3,7 @@ All LLM calls mocked."""
 from sim.llm.client import LLMBudget
 from sim.models import BatchPlan
 from sim.phases import plan as plan_phase
-from sim.world import World
+from sim.tests.util import new_world as World_new
 
 _CTX = {"tick": 0, "time_slot": "morning", "day": 0}
 
@@ -16,7 +16,7 @@ def _clean_batch(world) -> BatchPlan:
 
 
 def test_anti_bleed_rejects_secret_reference(monkeypatch):
-    world = World.new(":memory:")
+    world = World_new()
     batch = _clean_batch(world)
     # Tilda's reason quotes Odette's private mine secret — she can't know it.
     batch.root["tilda"].reason = "rushing to tell everyone the mine collapse was no accident"
@@ -32,7 +32,7 @@ def test_anti_bleed_rejects_secret_reference(monkeypatch):
 
 
 def test_agent_may_reference_own_secret(monkeypatch):
-    world = World.new(":memory:")
+    world = World_new()
     batch = _clean_batch(world)
     # Odette referencing her OWN secret is fine — it's in her known set.
     batch.root["odette"].reason = "keeping quiet about the mine collapse i witnessed"
@@ -43,7 +43,7 @@ def test_agent_may_reference_own_secret(monkeypatch):
 
 
 def test_missing_agent_gets_safe_default(monkeypatch):
-    world = World.new(":memory:")
+    world = World_new()
     batch = BatchPlan.model_validate(
         {"silas": {"destination": "market", "action": "work", "reason": "sell goods"}})
     monkeypatch.setattr("sim.llm.client.complete_json", lambda *a, **k: batch)
@@ -55,7 +55,7 @@ def test_missing_agent_gets_safe_default(monkeypatch):
 
 
 def test_quiet_tick_makes_no_llm_call(monkeypatch):
-    world = World.new(":memory:")
+    world = World_new()
     called = {"n": 0}
 
     def spy(*a, **k):

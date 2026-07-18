@@ -52,8 +52,8 @@ def _converse(s: TickState) -> dict:
 
 
 def _remember(s: TickState) -> dict:
-    mems = remember_phase.remember(s["world"], s["moves"], s["dialogues"],
-                                   s["tick_ctx"]["tick"])
+    mems = remember_phase.remember(s["world"], s["plans"], s["dialogues"],
+                                   s["tick_ctx"], s["budget"])
     return {"memories": mems, "trace": s["trace"] + ["remember"]}
 
 
@@ -87,6 +87,7 @@ def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
     """
     w = world.state()
     tick_ctx = {"tick": w["tick"], "time_slot": w["time_slot"], "day": w["day"]}
+    before = budget.spent(w["day"])
     final = GRAPH.invoke({
         "world": world, "rng": rng, "budget": budget, "tick_ctx": tick_ctx,
         "trace": [], "plans": {}, "rejected": [], "quiet": False, "moves": {},
@@ -102,5 +103,5 @@ def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
         conversations=[tuple(d.participants) for d in final["dialogues"]],
         narration=final["narration"],
         quiet=final["quiet"],
-        llm_calls=0 if final["quiet"] else 1,
+        llm_calls=budget.spent(w["day"]) - before,   # actual: planning + scoring
     )
