@@ -26,3 +26,9 @@ PAIR_REPEAT_PENALTY = 2.5        # demote recently-paired BELOW any fresh pair
                                  # (> max base score 2.1), so a knower is forced to
                                  # talk to someone new -> gossip reaches new ears.
 PAIR_COOLDOWN_TICKS = 3          # a pair is penalized for this many ticks after talking
+
+# Reflections + narrator + events (Day 5)
+REFLECT_TOP_N = 6                # day's memories fed to the reflection call, per agent
+REFLECTION_IMPORTANCE = 8       # beliefs are stored as high-importance memories
+USER_EVENT_IMPORTANCE = 7       # a user-injected event is notable, not mundane
+NARRATOR_TEMPERATURE = 0.7

@@ -91,12 +91,26 @@ def _with_backoff(fn, attempts: int = 3, base: float = 0.5):
             time.sleep(base * (2 ** i))  # ponytail: stdlib backoff, not tenacity
 
 
+_CALL_COUNT = 0  # total successful LLM calls this process (cost log / dry-run assert)
+
+
+def total_calls() -> int:
+    return _CALL_COUNT
+
+
+def reset_calls() -> None:
+    global _CALL_COUNT
+    _CALL_COUNT = 0
+
+
 def _one_call(provider: str, purpose: str, prompt: str, model: str | None,
               temperature: float, json_mode: bool) -> str:
+    global _CALL_COUNT
     model = model or _DEFAULT_MODEL[provider]
     fn = _provider_fn(provider)
     t0 = time.time()
     text, tokens = _with_backoff(lambda: fn(prompt, model, temperature, json_mode))
+    _CALL_COUNT += 1
     log.info("llm call purpose=%s provider=%s model=%s tokens=%s latency=%.2fs",
              purpose, provider, model, tokens, time.time() - t0)
     return text

@@ -54,6 +54,8 @@ def render_report(report) -> str:
     out.append(f"conversations: {convos}")
     for g in report.gossip:
         out.append(f"  💬 {g}")
+    for r in report.reflections:
+        out.append(f"  🧠 {r}")
     return "\n".join(out)
 
 

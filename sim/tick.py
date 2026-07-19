@@ -15,6 +15,7 @@ from sim.phases import act as act_phase
 from sim.phases import converse as converse_phase
 from sim.phases import narrate as narrate_phase
 from sim.phases import plan as plan_phase
+from sim.phases import reflect as reflect_phase
 from sim.phases import remember as remember_phase
 from sim.world import World
 
@@ -59,7 +60,8 @@ def _remember(s: TickState) -> dict:
 
 
 def _narrate(s: TickState) -> dict:
-    prose = narrate_phase.narrate(s["world"], s["tick_ctx"], s["moves"], s["dialogues"])
+    prose = narrate_phase.narrate(s["world"], s["tick_ctx"], s["moves"],
+                                  s["dialogues"], s["budget"])
     return {"narration": prose, "trace": s["trace"] + ["narrate"]}
 
 
@@ -94,6 +96,11 @@ def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
         "trace": [], "plans": {}, "rejected": [], "quiet": False, "moves": {},
         "dialogues": [], "memories": [], "narration": "",
     })
+    # Day-end (evening tick): each agent reflects on the day. Not a graph node —
+    # it's conditional and daily, so it's simpler to run it here.
+    reflections = []
+    if tick_ctx["time_slot"] == "evening" and not final["quiet"]:
+        reflections = reflect_phase.reflect(world, tick_ctx, budget)
     return TickReport(
         tick=tick_ctx["tick"],
         time_slot=tick_ctx["time_slot"],
@@ -105,7 +112,8 @@ def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
         gossip=[f"{learner} learned: {fact}"
                 for d in final["dialogues"]
                 for learner, facts in d.transfers.items() for fact in facts],
+        reflections=[f"{aid}: {belief}" for aid, belief in reflections],
         narration=final["narration"],
         quiet=final["quiet"],
-        llm_calls=budget.spent(w["day"]) - before,   # actual: planning + scoring
+        llm_calls=budget.spent(w["day"]) - before,   # plan+dialogue+score+narrate+reflect
     )

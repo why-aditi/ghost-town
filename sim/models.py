@@ -33,6 +33,10 @@ class ImportanceScores(RootModel[dict[str, int]]):
     """Batched importance scoring: {memory_index (as str): score 1-10}."""
 
 
+class ReflectionResult(RootModel[dict[str, list[str]]]):
+    """Batched day-end reflection: {agent_id: [belief statements]}."""
+
+
 class MemoryEntry(BaseModel):
     agent_id: str
     text: str
@@ -84,6 +88,7 @@ class TickReport(BaseModel):
     rejected: list[str] = []            # agent_ids whose plan was rejected/defaulted
     conversations: list[tuple[str, str]] = []
     gossip: list[str] = []              # "<learner> learned: <fact>" this tick
+    reflections: list[str] = []         # "<agent>: <belief>" at day-end
     narration: str = ""
     quiet: bool = False                 # budget exceeded -> quiet tick, no planning call
     llm_calls: int = 0

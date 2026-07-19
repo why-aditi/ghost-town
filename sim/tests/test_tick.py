@@ -36,6 +36,7 @@ def _init(world):
 
 
 def test_phases_run_in_strict_order(monkeypatch):
+    monkeypatch.setenv("GHOST_NARRATE", "0")  # narrator uses template, no real call
     world = new_world()
     monkeypatch.setattr("sim.llm.client.complete_json", _mock_llm(world))
     final = GRAPH.invoke(_init(world))
@@ -43,6 +44,7 @@ def test_phases_run_in_strict_order(monkeypatch):
 
 
 def test_planned_destinations_applied(monkeypatch):
+    monkeypatch.setenv("GHOST_NARRATE", "0")  # narrator uses template, no real call
     world = new_world()
     monkeypatch.setattr("sim.llm.client.complete_json", _mock_llm(world))
     report = run_tick(world, random.Random(0), LLMBudget())
