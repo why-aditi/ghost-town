@@ -50,10 +50,13 @@ PRD is source of truth; if my instructions conflict with it, ask me.
   persists sqlite world state; memory re-seeds each run. Tests use ephemeral
   chroma + a unique collection_prefix per store for isolation (EphemeralClient
   shares global state) — also keeps the suite fast (no disk).
-- chromadb (local persistent client, default embeddings), sqlite3 stdlib
-  (SQLAlchemy optional), fastapi + sse-starlette + uvicorn, pydantic v2
-  -- NOTE: fastapi/sse/uvicorn NOT installed yet (Day 6). chromadb installed
-  but UNUSED until Day 3 (memories are a stub sqlite table; migrate then).
+- chromadb (local persistent client, default embeddings), sqlite3 stdlib,
+  fastapi==0.139.2 + sse-starlette==3.4.5 + uvicorn==0.51.0, pydantic v2.
+- RUN THE APP (Day 6): backend `.venv\Scripts\python -m uvicorn api.main:app
+  --port 8000`; frontend `cd web && npm run dev` (Next 14, http://localhost:3000,
+  NEXT_PUBLIC_API in web/.env.local). POST /tick is SSE (per-phase progress);
+  the tick runs in a worker thread so /state stays responsive. db.py connection
+  is cross-thread (check_same_thread=False) + lock-serialized for this.
 - LLMs: Groq llama-3.3-70b-versatile for DIALOGUE + NARRATOR (speed/quality),
   Mistral mistral-small-latest for BATCHED PLANNING + importance scoring (JSON
   reliability, separate quota pool). All via sim/llm/client.py with backoff,

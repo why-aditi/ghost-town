@@ -82,38 +82,65 @@ def _build_graph():
 GRAPH = _build_graph()
 
 
-def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
-    """Run one full tick against the current world clock. Returns a report.
+def _build_report(tick_ctx, final, reflections, calls) -> TickReport:
+    return TickReport(
+        tick=tick_ctx["tick"], time_slot=tick_ctx["time_slot"], day=tick_ctx["day"],
+        planned=final["plans"], moves=final["moves"], rejected=final["rejected"],
+        conversations=[tuple(d.participants) for d in final["dialogues"]],
+        gossip=[f"{learner} learned: {fact}" for d in final["dialogues"]
+                for learner, facts in d.transfers.items() for fact in facts],
+        reflections=[f"{aid}: {belief}" for aid, belief in reflections],
+        narration=final["narration"], quiet=final["quiet"], llm_calls=calls,
+    )
 
-    Does NOT advance the clock — cli.py advances after rendering so the report
-    and map reflect the tick that just ran.
-    """
+
+# Human-readable progress label per phase, for the SSE stream / UI.
+_PHASE_LABEL = {
+    "plan": "agents are deciding what to do…",
+    "act": "agents move about town…",
+    "converse": "conversations unfold…",
+    "remember": "everyone forms memories…",
+    "narrate": "the chronicler writes it down…",
+    "reflect": "agents reflect on the day…",
+}
+
+
+def run_tick_stream(world: World, rng: random.Random, budget: LLMBudget):
+    """Generator yielding (phase, data) as each phase completes, then
+    ("report", TickReport). Powers both run_tick and the API's SSE stream.
+    Does NOT advance the clock."""
     w = world.state()
     tick_ctx = {"tick": w["tick"], "time_slot": w["time_slot"], "day": w["day"]}
     before = budget.spent(w["day"])
-    final = GRAPH.invoke({
-        "world": world, "rng": rng, "budget": budget, "tick_ctx": tick_ctx,
-        "trace": [], "plans": {}, "rejected": [], "quiet": False, "moves": {},
-        "dialogues": [], "memories": [], "narration": "",
-    })
-    # Day-end (evening tick): each agent reflects on the day. Not a graph node —
-    # it's conditional and daily, so it's simpler to run it here.
+    final = {"plans": {}, "rejected": [], "quiet": False, "moves": {},
+             "dialogues": [], "narration": "", "trace": []}
+    init = {"world": world, "rng": rng, "budget": budget, "tick_ctx": tick_ctx,
+            "memories": [], **final}
+
+    for update in GRAPH.stream(init, stream_mode="updates"):
+        for node, delta in update.items():
+            final.update(delta)
+            data = {"label": _PHASE_LABEL.get(node, node)}
+            if node == "converse":
+                data["conversations"] = [list(d.participants) for d in final["dialogues"]]
+            elif node == "narrate":
+                data["narration"] = final["narration"]
+            yield node, data
+
     reflections = []
     if tick_ctx["time_slot"] == "evening" and not final["quiet"]:
         reflections = reflect_phase.reflect(world, tick_ctx, budget)
-    return TickReport(
-        tick=tick_ctx["tick"],
-        time_slot=tick_ctx["time_slot"],
-        day=tick_ctx["day"],
-        planned=final["plans"],
-        moves=final["moves"],
-        rejected=final["rejected"],
-        conversations=[tuple(d.participants) for d in final["dialogues"]],
-        gossip=[f"{learner} learned: {fact}"
-                for d in final["dialogues"]
-                for learner, facts in d.transfers.items() for fact in facts],
-        reflections=[f"{aid}: {belief}" for aid, belief in reflections],
-        narration=final["narration"],
-        quiet=final["quiet"],
-        llm_calls=budget.spent(w["day"]) - before,   # plan+dialogue+score+narrate+reflect
-    )
+        yield "reflect", {"label": _PHASE_LABEL["reflect"],
+                          "beliefs": [f"{a}: {b}" for a, b in reflections]}
+
+    calls = budget.spent(w["day"]) - before
+    yield "report", _build_report(tick_ctx, final, reflections, calls)
+
+
+def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
+    """Run one full tick; return the report. Does NOT advance the clock."""
+    report = None
+    for phase, data in run_tick_stream(world, rng, budget):
+        if phase == "report":
+            report = data
+    return report

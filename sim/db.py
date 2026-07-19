@@ -1,11 +1,24 @@
 """SQLite world state + story log (PRD §8). Thin storage layer.
 
 Low-level row ops only — validation and domain rules live in world.py.
-Memories live here in Phase 1 as a stub stream; they migrate to ChromaDB
-collections on Day 3 (that's when retrieval scoring lands).
+Memories live in ChromaDB, not here (see phases/memory.py).
+
+The API runs ticks in a worker thread while endpoints read from threadpool
+threads, so the connection is shared cross-thread (check_same_thread=False) and
+every method is serialized by a lock — safe for our one-tick-at-a-time model.
 """
+import functools
 import json
 import sqlite3
+import threading
+
+
+def _locked(fn):
+    @functools.wraps(fn)
+    def wrap(self, *a, **k):
+        with self._lock:
+            return fn(self, *a, **k)
+    return wrap
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS world (
@@ -50,16 +63,19 @@ CREATE TABLE IF NOT EXISTS story_log (
 
 class DB:
     def __init__(self, path: str = ":memory:"):
-        self.conn = sqlite3.connect(path)
+        self._lock = threading.Lock()
+        self.conn = sqlite3.connect(path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
         self.conn.commit()
 
     # --- world clock ---
+    @_locked
     def get_world(self) -> dict:
         row = self.conn.execute("SELECT tick, time_slot, day FROM world WHERE id = 1").fetchone()
         return dict(row) if row else None
 
+    @_locked
     def set_world(self, tick: int, time_slot: str, day: int) -> None:
         self.conn.execute(
             "INSERT INTO world (id, tick, time_slot, day) VALUES (1, ?, ?, ?) "
@@ -69,6 +85,7 @@ class DB:
         self.conn.commit()
 
     # --- agents ---
+    @_locked
     def insert_agent(self, a: dict) -> None:
         self.conn.execute(
             "INSERT INTO agents (id, name, occupation, home_zone, position, "
@@ -79,14 +96,17 @@ class DB:
         )
         self.conn.commit()
 
+    @_locked
     def get_agents(self) -> list[dict]:
         rows = self.conn.execute("SELECT * FROM agents ORDER BY id").fetchall()
         return [self._agent_row(r) for r in rows]
 
+    @_locked
     def get_agent(self, agent_id: str) -> dict | None:
         row = self.conn.execute("SELECT * FROM agents WHERE id = ?", (agent_id,)).fetchone()
         return self._agent_row(row) if row else None
 
+    @_locked
     def set_position(self, agent_id: str, zone: str) -> None:
         self.conn.execute("UPDATE agents SET position = ? WHERE id = ?", (zone, agent_id))
         self.conn.commit()
@@ -99,6 +119,7 @@ class DB:
         return d
 
     # --- relationships ---
+    @_locked
     def insert_relationship(self, agent_id: str, other_id: str, sentiment: float,
                             summary: str, tick: int) -> None:
         self.conn.execute(
@@ -108,12 +129,14 @@ class DB:
         )
         self.conn.commit()
 
+    @_locked
     def get_relationships(self, agent_id: str) -> list[dict]:
         rows = self.conn.execute(
             "SELECT other_id, sentiment, summary, updated_tick FROM relationships "
             "WHERE agent_id = ? ORDER BY other_id", (agent_id,)).fetchall()
         return [dict(r) for r in rows]
 
+    @_locked
     def get_relationship(self, agent_id: str, other_id: str) -> dict | None:
         row = self.conn.execute(
             "SELECT sentiment, summary, updated_tick FROM relationships "
@@ -121,6 +144,7 @@ class DB:
         return dict(row) if row else None
 
     # --- events ---
+    @_locked
     def add_event(self, tick: int, zone: str, description: str, source: str) -> int:
         cur = self.conn.execute(
             "INSERT INTO events (tick_injected, zone, description, source) VALUES (?,?,?,?)",
@@ -128,18 +152,22 @@ class DB:
         self.conn.commit()
         return cur.lastrowid
 
+    @_locked
     def events_at(self, zone: str) -> list[dict]:
         rows = self.conn.execute("SELECT * FROM events WHERE zone = ? ORDER BY id", (zone,)).fetchall()
         return [dict(r) for r in rows]
 
     # --- story log ---
+    @_locked
     def add_story(self, tick: int, prose: str) -> None:
         self.conn.execute("INSERT INTO story_log (tick, prose) VALUES (?, ?)", (tick, prose))
         self.conn.commit()
 
+    @_locked
     def get_story(self) -> list[dict]:
         rows = self.conn.execute("SELECT tick, prose FROM story_log ORDER BY rowid").fetchall()
         return [dict(r) for r in rows]
 
+    @_locked
     def is_seeded(self) -> bool:
         return self.conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0] > 0
