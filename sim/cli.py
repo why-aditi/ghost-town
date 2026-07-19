@@ -52,6 +52,8 @@ def render_report(report) -> str:
         flag = " ✗" if aid in report.rejected else ""
         out.append(f"  {aid:<7} → {p.destination:<7} [{p.action}]{flag}: {p.reason}")
     out.append(f"conversations: {convos}")
+    for g in report.gossip:
+        out.append(f"  💬 {g}")
     return "\n".join(out)
 
 

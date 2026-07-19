@@ -15,3 +15,14 @@ SEED_SECRET_IMPORTANCE = 8
 SEED_REL_IMPORTANCE = 5
 
 BUDGET_PER_DAY = 60        # LLM calls per simulated day before quiet-tick
+
+# Conversations (Day 4)
+MAX_CONVERSATIONS_PER_TICK = 3   # <= 3 dialogue calls/tick (plan+3+score = 5 <= 6)
+DIALOGUE_TEMPERATURE = 0.7       # higher temp -> livelier dialogue
+PAIR_SOC_W = 1.0                 # pairing: sociability weight
+PAIR_REL_W = 0.8                 # pairing: |sentiment| weight (rivals talk too)
+PAIR_ACQ_W = 0.3                 # pairing: already-acquainted bonus
+PAIR_REPEAT_PENALTY = 2.5        # demote recently-paired BELOW any fresh pair
+                                 # (> max base score 2.1), so a knower is forced to
+                                 # talk to someone new -> gossip reaches new ears.
+PAIR_COOLDOWN_TICKS = 3          # a pair is penalized for this many ticks after talking

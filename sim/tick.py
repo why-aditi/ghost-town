@@ -47,7 +47,8 @@ def _act(s: TickState) -> dict:
 
 def _converse(s: TickState) -> dict:
     # Quiet tick (budget exhausted): no conversations (CLAUDE.md).
-    dialogues = [] if s["quiet"] else converse_phase.converse(s["world"])
+    dialogues = ([] if s["quiet"]
+                 else converse_phase.converse(s["world"], s["tick_ctx"], s["budget"]))
     return {"dialogues": dialogues, "trace": s["trace"] + ["converse"]}
 
 
@@ -101,6 +102,9 @@ def run_tick(world: World, rng: random.Random, budget: LLMBudget) -> TickReport:
         moves=final["moves"],
         rejected=final["rejected"],
         conversations=[tuple(d.participants) for d in final["dialogues"]],
+        gossip=[f"{learner} learned: {fact}"
+                for d in final["dialogues"]
+                for learner, facts in d.transfers.items() for fact in facts],
         narration=final["narration"],
         quiet=final["quiet"],
         llm_calls=budget.spent(w["day"]) - before,   # actual: planning + scoring

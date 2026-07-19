@@ -114,6 +114,12 @@ class DB:
             "WHERE agent_id = ? ORDER BY other_id", (agent_id,)).fetchall()
         return [dict(r) for r in rows]
 
+    def get_relationship(self, agent_id: str, other_id: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT sentiment, summary, updated_tick FROM relationships "
+            "WHERE agent_id = ? AND other_id = ?", (agent_id, other_id)).fetchone()
+        return dict(row) if row else None
+
     # --- events ---
     def add_event(self, tick: int, zone: str, description: str, source: str) -> int:
         cur = self.conn.execute(

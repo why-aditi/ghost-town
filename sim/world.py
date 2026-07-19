@@ -17,6 +17,7 @@ class World:
         self.db = db
         self.memory = memory
         self.zones = set(ZONES)
+        self.pair_last_tick: dict = {}   # transient: (a,b) -> tick they last talked
 
     @classmethod
     def new(cls, db_path: str = ":memory:", memory_path: str | None = None,
@@ -63,6 +64,19 @@ class World:
 
     def relationships(self, agent_id: str) -> list[dict]:
         return self.db.get_relationships(agent_id)
+
+    def relationship(self, agent_id: str, other_id: str) -> dict | None:
+        return self.db.get_relationship(agent_id, other_id)
+
+    def update_relationship(self, agent_id: str, other_id: str, delta: float,
+                            summary: str) -> float:
+        """Apply a validated sentiment delta (clamped to [-1,1]) + new summary."""
+        cur = self.db.get_relationship(agent_id, other_id)
+        base = cur["sentiment"] if cur else 0.0
+        sentiment = max(-1.0, min(1.0, base + delta))
+        tick = self.db.get_world()["tick"]
+        self.db.insert_relationship(agent_id, other_id, sentiment, summary, tick)
+        return sentiment
 
     # --- validated mutations ---
     def move_agent(self, agent_id: str, zone: str) -> None:

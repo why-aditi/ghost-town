@@ -6,7 +6,7 @@ schema-aware: BatchPlan for planning, ImportanceScores for scoring.
 import random
 
 from sim.llm.client import LLMBudget
-from sim.models import BatchPlan, ImportanceScores
+from sim.models import BatchPlan, DialogueResult, ImportanceScores
 from sim.personas import WORKPLACE
 from sim.tick import GRAPH, run_tick
 from sim.tests.util import new_world
@@ -20,7 +20,9 @@ def _mock_llm(world):
                           "reason": f"{a['name']} heads to work"}
                 for a in world.agents()
             })
-        return ImportanceScores.model_validate({})  # scorer -> all default importance
+        if schema is DialogueResult:
+            return DialogueResult.model_validate({})  # empty dialogue, no transfers
+        return ImportanceScores.model_validate({})    # scorer -> all default importance
     return fake
 
 
@@ -46,4 +48,5 @@ def test_planned_destinations_applied(monkeypatch):
     report = run_tick(world, random.Random(0), LLMBudget())
     for a in world.agents():
         assert a["position"] == WORKPLACE[a["occupation"]]
-    assert report.llm_calls == 2 and report.quiet is False  # planning + scoring
+    # planning + 1 dialogue (the two gossips meet at the square) + scoring
+    assert report.llm_calls == 3 and report.quiet is False

@@ -7,6 +7,7 @@ not a bleed. Information only enters an agent's mind here; that's the substrate
 gossip will propagate over (Day 4).
 """
 import logging
+import os
 
 from sim import config
 from sim.llm import client
@@ -49,6 +50,10 @@ def _gather(world, plans, dialogues, tick_ctx) -> list[tuple[str, str, str]]:
         for aid in d.participants:
             other = names[[p for p in d.participants if p != aid][0]]
             entries.append((aid, f"I talked with {other} in the {d.zone}.", "conversation"))
+        # Gossip payload: what each participant LEARNED, from their perspective.
+        for learner, facts in d.transfers.items():
+            for fact in facts:
+                entries.append((learner, fact, "conversation"))
     return entries
 
 
@@ -59,7 +64,9 @@ def _score(entries: list[tuple[str, str, str]], tick_ctx, budget) -> list[int]:
     n = len(entries)
     if n == 0:
         return []
-    if not budget.can_spend(day):
+    # GHOST_SCORE=0 skips the scoring LLM call (e.g. the gossip demo, to cut
+    # per-tick calls) -> everything gets default importance.
+    if os.getenv("GHOST_SCORE") == "0" or not budget.can_spend(day):
         return [config.DEFAULT_IMPORTANCE] * n
 
     numbered = "\n".join(f"{i}: {text}" for i, (_, text, _) in enumerate(entries))

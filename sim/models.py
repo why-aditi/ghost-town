@@ -42,11 +42,29 @@ class MemoryEntry(BaseModel):
 
 
 class Dialogue(BaseModel):
-    """A conversation between a co-located pair. Stub exchanges in Phase 1."""
+    """A conversation between a co-located pair (post-validation)."""
     participants: list[str]   # exactly two agent ids
     zone: str
-    exchanges: list[str] = []
-    transfers: list[str] = []  # "information transferred" → both memory streams
+    exchanges: list[str] = []                    # "Name: text" lines, for the story log
+    transfers: dict[str, list[str]] = {}         # learner_id -> facts learned (their POV)
+
+
+# --- LLM dialogue output (Groq) ---
+class DialogueTurn(BaseModel):
+    speaker: str
+    text: str
+
+
+class RelationshipUpdate(BaseModel):
+    sentiment_delta: float = 0.0
+    summary: str
+
+
+class DialogueResult(BaseModel):
+    """One Groq call's full output for a pair."""
+    exchanges: list[DialogueTurn] = []
+    transfers: dict[str, list[str]] = {}         # learner_id -> facts learned (their POV)
+    relationships: dict[str, RelationshipUpdate] = {}  # agent_id -> updated feeling
 
 
 class WorldEvent(BaseModel):
@@ -65,6 +83,7 @@ class TickReport(BaseModel):
     moves: dict[str, str] = {}          # agent_id -> destination applied
     rejected: list[str] = []            # agent_ids whose plan was rejected/defaulted
     conversations: list[tuple[str, str]] = []
+    gossip: list[str] = []              # "<learner> learned: <fact>" this tick
     narration: str = ""
     quiet: bool = False                 # budget exceeded -> quiet tick, no planning call
     llm_calls: int = 0

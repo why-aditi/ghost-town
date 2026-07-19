@@ -5,30 +5,15 @@ Quiet-tick degradation: if the per-day budget is exhausted, agents continue
 their current activity (stay put) with no LLM call and no conversations.
 """
 import logging
-import re
 
 from sim import config
 from sim.llm import client
 from sim.llm.client import LLMUnavailable
 from sim.models import AgentPlan, BatchPlan
 from sim.personas import LEGAL_ACTIONS, WORKPLACE, ZONES
+from sim.text import tokens as _tokens
 
 log = logging.getLogger("sim.plan")
-
-_STOP = {"that", "this", "with", "from", "they", "them", "their", "have",
-         "will", "about", "into", "been", "were", "your", "what", "when",
-         "then", "here", "there", "keep", "want", "need", "goes", "going",
-         "today", "morning", "afternoon", "evening", "town", "resident"}
-
-
-def _tokens(*texts: str) -> set[str]:
-    """Distinctive lowercase words (>=4 chars, minus stopwords)."""
-    out: set[str] = set()
-    for t in texts:
-        for w in re.findall(r"[a-z']+", (t or "").lower()):
-            if len(w) >= 4 and w not in _STOP:
-                out.add(w)
-    return out
 
 
 def _safe_default(agent: dict, why: str) -> AgentPlan:
@@ -56,6 +41,19 @@ def validate_no_bleed(agent: dict, plan: AgentPlan,
     return True, None
 
 
+def _social_nudge(slot: str) -> str:
+    """Time-of-day rhythm that creates co-location (so gossip can spread)."""
+    if slot == "evening":
+        base = ("It is EVENING — the whole town gathers at the SQUARE to relax "
+                "and share the day's news; nearly every resident heads to the square now.")
+    elif slot == "afternoon":
+        base = ("It is afternoon — the cafe and square grow lively; residents often "
+                "visit them to socialize, trade news, and pursue relationships.")
+    else:
+        base = "It is morning — most residents head to their workplace to start the day."
+    return base + " A resident carrying news or a grudge seeks out the people it concerns."
+
+
 def _query(agent: dict, tick_ctx: dict) -> str:
     """Retrieval query for an agent: their goals + the current time-slot."""
     return "; ".join(agent["daily_goals"]) + f" at {tick_ctx['time_slot']}"
@@ -76,6 +74,7 @@ def _build_prompt(world, tick_ctx: dict, agents: list[dict],
         "resident's secrets or private plans.\n"
         f"destination must be one of: {', '.join(ZONES)}.\n"
         f"action must be one of: {', '.join(LEGAL_ACTIONS)}.\n"
+        f"{_social_nudge(tick_ctx['time_slot'])}\n"
         'Return ONLY a JSON object keyed by resident id; each value is '
         '{"destination": "<zone>", "action": "<action>", "reason": "<one line>"}.\n\n'
         f"WORLD: It is {tick_ctx['time_slot']} of day {tick_ctx['day']}. "

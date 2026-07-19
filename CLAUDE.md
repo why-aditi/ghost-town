@@ -109,6 +109,17 @@ Zones (8): homes, cafe, market, farm, well, square, bakery, forge.
 Pathfinding/animation beyond zone teleport + CSS tween, voice, sprites/assets
 generation, multiplayer, save/load UI (P1), talk-to-agent chat (P1).
 
+## Gossip demo (Day-4 centerpiece)
+`python -m sim.gossip_demo [agent] [ticks]` (default: tilda, 12) injects a
+distinctive secret into ONE agent, runs live, prints the propagation chain
+(exact wording per hop, mutations included), asserts it reached >= 2 others.
+Spread relies on: evening-gathering nudge (whole town -> square in the evening
+slot), pairing cooldown (a pair benched PAIR_COOLDOWN_TICKS after talking, so
+gossip reaches new ears), transfer grounding + dedup, MAX_CONVERSATIONS_PER_TICK
+=3. Demo sets GHOST_SCORE=0 to skip importance scoring (one fewer LLM call).
+NOTE: free-tier providers throttle intermittently (30-60s/call) — a 12-tick run
+can take 5-20 min; run it backgrounded.
+
 ## Working style
 - Plan per phase → my approval → build. Commit per milestone.
 - Console-first: the simulation must be fully runnable and debuggable headless
