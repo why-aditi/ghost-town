@@ -5,7 +5,7 @@ import ConversationDialog from "@/components/ConversationDialog";
 import EventBox from "@/components/EventBox";
 import Inspector from "@/components/Inspector";
 import StoryLog from "@/components/StoryLog";
-import TownMap from "@/components/TownMap";
+import TownCanvas from "@/components/town/TownCanvas";
 import {
   AgentDetail, Conversation, State, StoryEntry,
   getAgent, getState, getStory, injectEvent, streamTick,
@@ -84,7 +84,7 @@ export default function Page() {
 
       <div className="flex min-h-0 flex-1">
         <section className="relative flex min-w-0 flex-1 items-center justify-center p-4">
-          <TownMap state={state} selected={selected} onSelect={setSelected}
+          <TownCanvas state={state} selected={selected} onSelect={setSelected}
             onConversation={setConvo} />
           {whisper && (
             <div className="pop absolute left-1/2 top-5 -translate-x-1/2 rounded-full border

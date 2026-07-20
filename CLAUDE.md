@@ -61,7 +61,11 @@ PRD is source of truth; if my instructions conflict with it, ask me.
   Mistral mistral-small-latest for BATCHED PLANNING + importance scoring (JSON
   reliability, separate quota pool). All via sim/llm/client.py with backoff,
   fallback (groq↔mistral), and the per-day budget counter.
-- Frontend: Next.js 14 + Tailwind, SVG map. NO Phaser, NO game engine.
+- Frontend: Next.js 14 + Tailwind. Town map is a raw <canvas> 2D game renderer
+  (requestAnimationFrame loop; code-defined pixel-art sprites/tiles baked to
+  offscreen canvases) in web/components/town/. Still NO Phaser/game-engine lib.
+  (Owner decision — supersedes the original "SVG map / animation beyond tween
+  out-of-scope" constraint; walk-cycle sprites + moving characters are in.)
 - After install, record exact versions here + requirements.txt. Verify
   LangGraph and chromadb APIs against installed versions before coding.
 
