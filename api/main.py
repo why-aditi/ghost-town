@@ -54,6 +54,22 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
 
+def _mood(rels: list[dict]) -> str:
+    """A one-emoji hint of an agent's dominant relationship, for the UI.
+    ponytail: heuristic off sentiment + summary keywords, not an LLM call."""
+    if not rels:
+        return ""
+    r = max(rels, key=lambda x: abs(x["sentiment"]))
+    s, summary = r["sentiment"], (r.get("summary") or "").lower()
+    if any(k in summary for k in ("owe", "debt", "money", "coin")):
+        return "💰"
+    if s >= 0.35:
+        return "❤️"
+    if s <= -0.35:
+        return "💢"
+    return ""
+
+
 @app.get("/state")
 def get_state():
     w = sim().world.state()
@@ -64,7 +80,8 @@ def get_state():
         "time_slot": r.time_slot if r else w["time_slot"],
         "zones": ZONES,
         "agents": [{"id": a["id"], "name": a["name"], "occupation": a["occupation"],
-                    "position": a["position"]} for a in sim().world.agents()],
+                    "position": a["position"], "mood": _mood(sim().world.relationships(a["id"]))}
+                   for a in sim().world.agents()],
         "conversations": r.transcripts if r else [],
         "gossip": r.gossip if r else [],
         "ticking": sim().ticking,

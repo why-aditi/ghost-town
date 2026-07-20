@@ -42,6 +42,10 @@ html, body {
 }
 .firefly { animation: drift 5s ease-in-out infinite; }
 
+/* --- "a day passes" transition vignette --- */
+@keyframes dayfade { 0% { opacity: 0; } 25% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+.dayfade { animation: dayfade 1.9s ease-in-out both; }
+
 @media (prefers-reduced-motion: reduce) {
-  .bob, .ripple, .whisper, .firefly { animation: none; }
+  .bob, .ripple, .whisper, .firefly, .dayfade { animation: none; }
 }

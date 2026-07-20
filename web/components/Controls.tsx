@@ -5,9 +5,11 @@ const SUN: Record<string, string> = { morning: "🌅", afternoon: "☀️", even
 
 export default function Controls({
   day, tick, ticking, phase, autoplay, onTick, onToggleAutoplay,
+  speed, onCycleSpeed, sound, onToggleSound,
 }: {
   day: number; tick: number; ticking: boolean; phase: string | null;
   autoplay: boolean; onTick: () => void; onToggleAutoplay: () => void;
+  speed: number; onCycleSpeed: () => void; sound: boolean; onToggleSound: () => void;
 }) {
   const slot = SLOTS[tick % 3];
   return (
@@ -34,6 +36,14 @@ export default function Controls({
             autoplay ? "bg-rose-700 text-rose-50 hover:bg-rose-600"
                      : "border border-amber-900/60 text-amber-100/80 hover:bg-black/30"}`}>
           {autoplay ? "◼ Stop" : "▶ Auto"}
+        </button>
+        <button onClick={onCycleSpeed} title="Autoplay speed"
+          className="rounded-lg border border-amber-900/60 px-2.5 py-1.5 text-sm font-semibold text-amber-100/80 hover:bg-black/30">
+          {speed}×
+        </button>
+        <button onClick={onToggleSound} title={sound ? "Mute" : "Sound on"}
+          className="rounded-lg border border-amber-900/60 px-2.5 py-1.5 text-base leading-none text-amber-100/80 hover:bg-black/30">
+          {sound ? "🔊" : "🔇"}
         </button>
       </div>
     </header>

@@ -61,13 +61,6 @@ function building(c: CanvasRenderingContext2D, zone: string, windows: Rect[]) {
   }
 }
 
-function bush(c: CanvasRenderingContext2D, x: number, y: number) {
-  R(c, x - 14, y - 4, 28, 12, "#5f7f43");
-  R(c, x - 18, y, 12, 10, "#6d8f4d");
-  R(c, x + 6, y, 12, 10, "#6d8f4d");
-  R(c, x - 6, y - 12, 14, 12, "#6d8f4d");
-}
-
 /** Bake the static scene; returns the canvas + window rects for glow. */
 export function bakeScene(): { canvas: HTMLCanvasElement; windows: Rect[] } {
   const canvas = document.createElement("canvas");
@@ -107,9 +100,7 @@ export function bakeScene(): { canvas: HTMLCanvasElement; windows: Rect[] } {
   c.strokeStyle = "#7f9757"; c.lineWidth = 2; c.stroke();
   c.restore();
 
-  // decorative bushes
-  for (const [bx, by] of [[70, 90], [930, 100], [60, 560], [940, 560], [500, 40], [500, 600]])
-    bush(c, bx, by);
+  // (bushes are drawn live now — see drawFoliage — so they can sway)
 
   // buildings (sorted by y so lower ones overlap correctly)
   Object.keys(Z).sort((a, b) => Z[a].y - Z[b].y).forEach((z) => building(c, z, windows));
@@ -133,6 +124,66 @@ export function drawSky(c: CanvasRenderingContext2D, slot: string) {
   const g = c.createLinearGradient(0, 0, 0, WORLD_H);
   g.addColorStop(0, a); g.addColorStop(1, b);
   c.fillStyle = g; c.fillRect(0, 0, WORLD_W, WORLD_H);
+}
+
+// Directional daylight: a big soft radial wash from the sun/moon's corner,
+// tinting the whole town by time of day. Top-down-appropriate (no floating
+// sun sprite over grass). Drawn over the map, under agents.
+const LIGHT: Record<string, { x: number; y: number; col: string; a: number }> = {
+  morning: { x: 180, y: 90, col: "255,225,150", a: 0.30 },
+  afternoon: { x: 620, y: 40, col: "255,248,210", a: 0.20 },
+  evening: { x: 840, y: 90, col: "150,165,235", a: 0.26 },
+};
+export function drawSunlight(c: CanvasRenderingContext2D, slot: string, t: number) {
+  const p = LIGHT[slot] || LIGHT.afternoon;
+  const x = p.x + Math.sin(t / 11000) * 20;
+  const g = c.createRadialGradient(x, p.y, 60, x, p.y, WORLD_W * 0.95);
+  g.addColorStop(0, `rgba(${p.col},${p.a})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  c.save(); c.beginPath(); (c as any).roundRect(16, 16, WORLD_W - 32, WORLD_H - 32, 30); c.clip();
+  c.fillStyle = g; c.fillRect(0, 0, WORLD_W, WORLD_H); c.restore();
+}
+
+// Drifting cloud shadows sliding across the town — the readable "weather" for a
+// top-down map. Soft dark ellipses, looping x. Skipped at evening (it's dim).
+const CLOUDS = [{ y: 150, s: 10, r: 90 }, { y: 360, s: 15, r: 70 }, { y: 520, s: 7, r: 110 }];
+export function drawClouds(c: CanvasRenderingContext2D, slot: string, t: number) {
+  if (slot === "evening") return;
+  c.save(); c.beginPath(); (c as any).roundRect(16, 16, WORLD_W - 32, WORLD_H - 32, 30); c.clip();
+  c.fillStyle = "rgba(40,50,40,0.06)";
+  CLOUDS.forEach((cl, i) => {
+    const x = ((cl.s * t) / 1000 + i * 420) % (WORLD_W + 320) - 160;
+    for (const [dx, dy, r] of [[0, 0, cl.r], [cl.r * 0.7, 12, cl.r * 0.7], [-cl.r * 0.7, 10, cl.r * 0.6]]) {
+      c.beginPath(); c.ellipse(x + dx, cl.y + dy, r, r * 0.5, 0, 0, Math.PI * 2); c.fill();
+    }
+  });
+  c.restore();
+}
+
+// Rising chimney/oven smoke. Sources: forge chimney + bakery oven.
+const SMOKE = [{ x: 816, y: 470 }, { x: 516, y: 74 }];
+export function drawSmoke(c: CanvasRenderingContext2D, t: number) {
+  for (const src of SMOKE)
+    for (let i = 0; i < 5; i++) {
+      const p = ((t / 2600 + i / 5) % 1);
+      c.globalAlpha = (1 - p) * 0.4;
+      c.fillStyle = "#d8d2c8";
+      const r = 3 + p * 9, x = src.x + Math.sin(p * 6 + i) * 8;
+      c.beginPath(); c.arc(x, src.y - p * 54, r, 0, Math.PI * 2); c.fill();
+    }
+  c.globalAlpha = 1;
+}
+
+// Swaying bushes (moved out of the static bake so the tops can sway).
+const BUSHES = [[70, 90], [930, 100], [60, 560], [940, 560], [500, 40], [500, 600]];
+export function drawFoliage(c: CanvasRenderingContext2D, t: number) {
+  BUSHES.forEach(([bx, by], i) => {
+    const sway = Math.sin(t / 900 + i) * 2;
+    R(c, bx - 14, by - 4, 28, 12, "#5f7f43");
+    R(c, bx - 18 + sway, by, 12, 10, "#6d8f4d");
+    R(c, bx + 6 + sway, by, 12, 10, "#6d8f4d");
+    R(c, bx - 6 + sway * 1.5, by - 12, 14, 12, "#6d8f4d");
+  });
 }
 
 export function drawFountain(c: CanvasRenderingContext2D, t: number) {
