@@ -6,7 +6,7 @@ embedding model is loaded (avoids a slow first tick on camera).
 
 | # | Time | Shot | Say / show |
 |---|------|------|-----------|
-| 1 | 0:00–0:12 | **Cold open on the map.** Wide shot of the village, characters idling at their homes. Press **Auto**. | "Eight AI villagers — each with a job, memories, goals, and secrets. Nobody scripted what happens next." |
+| 1 | 0:00–0:12 | **Cold open on the map.** Wide shot of the living village — residents milling about, a cat and chicken roaming, cloud shadows drifting, mood emotes floating (❤️/💢/💰). Press **Auto**. | "Eight AI villagers — each with a job, memories, goals, and secrets. Nobody scripted what happens next." |
 | 2 | 0:12–0:30 | **Morning rush.** Characters walk out along the paths to their workplaces; the day/time badge ticks morning → afternoon. | "Every tick, one LLM call plans all eight at once — that's the trick that keeps it inside a free tier." |
 | 3 | 0:30–0:48 | **Click a resident** (e.g. Silas the merchant). Inspector slides in. | "Click anyone and read their mind — current plan and *why*, their memories, how they feel about everyone else. This is real retrieved memory, not a bio." |
 | 4 | 0:48–1:00 | **Evening gathering.** The whole town converges on the square; speech bubbles pop. Click a **💬 bubble** → the actual dialogue transcript. | "When they meet, they actually talk — and what they learn gets written to memory." |
@@ -22,5 +22,8 @@ it.
 
 **Tips:** free-tier ticks can take 15–60s (the SSE progress label shows what
 phase it's on) — cut those waits in the edit. Record at ~1440p; the canvas is
-crisp (pixel-art, nearest-neighbor). Dusk (evening) is the most photogenic — glowing
-windows + fireflies — so try to land the rumor-spread beats around then.
+crisp (pixel-art, nearest-neighbor). Use **mouse-wheel zoom** (or **Follow** on a
+selected resident) for tight character close-ups, then double-click / **Reset**
+to pull back out. Flip **sound** on for the ambient pad + gossip chime if your
+capture records audio. Dusk (evening) is the most photogenic — glowing windows +
+fireflies — so try to land the rumor-spread beats around then.

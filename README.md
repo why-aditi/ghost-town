@@ -23,10 +23,18 @@ tick, ~17 per simulated day).
 
 A raw `<canvas>` game renderer (no game engine): pixel-art cottages, cobble
 paths, a fountain plaza. The eight residents are identifiable by occupation
-(baker's toque, blacksmith's apron + hammer, well-keeper's headscarf…), **walk
-along the paths** between places each tick, gather in the square by evening, and
-whisper 🤫 when a secret passes. The whole scene is lit by the simulation clock —
-soft dawn, bright noon, and a dusk where windows glow and fireflies drift.
+(baker's toque, blacksmith's apron + hammer, well-keeper's headscarf…), face
+four directions as they **walk the paths** between places each tick, and mill
+about between ticks so the town never freezes. They gather in the square by
+evening, turn to face whoever they're talking to, and float a mood over their
+heads — ❤️ a crush, 💢 a rival, 💰 a debt, 🤫 a secret just passing.
+
+The whole scene is alive and lit by the simulation clock: a daylight wash that
+shifts warm dawn → bright noon → blue dusk (windows glow, fireflies drift),
+drifting cloud shadows, chimney smoke, swaying bushes, and a cat, chicken, and
+bird roaming on their own. Mouse-wheel to **zoom**, drag to **pan**, **Follow**
+a selected resident, and toggle synthesized ambient sound (off by default). All
+procedural on the game loop — still no Phaser, no sprite assets.
 
 ---
 

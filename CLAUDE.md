@@ -70,6 +70,15 @@ PRD is source of truth; if my instructions conflict with it, ask me.
   offscreen canvases) in web/components/town/. Still NO Phaser/game-engine lib.
   (Owner decision — supersedes the original "SVG map / animation beyond tween
   out-of-scope" constraint; walk-cycle sprites + moving characters are in.)
+- Game-feel layer (all procedural on the loop, no new deps): worldModel.ts has
+  idle micro-wander + 4-dir facing + roaming critters (cat/chicken/bird);
+  sprites.ts drawCharacter takes a `dir`; scene.ts adds sunlight tint, drifting
+  cloud shadows, chimney smoke, swaying bushes; emotes.ts floats mood/gossip
+  emoji (mood comes from a `mood` field GET /state derives from relationships);
+  TownCanvas.tsx owns camera (wheel-zoom-about-cursor + drag-pan + follow-
+  selected + reset — hit-testing inverts the same transform); audio.ts is
+  synthesized Web Audio (ambient/footstep/click/chime), default muted, inits on
+  the mute-button gesture. reduced-motion disables wander/emotes/particles.
 - After install, record exact versions here + requirements.txt. Verify
   LangGraph and chromadb APIs against installed versions before coding.
 
