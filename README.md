@@ -15,6 +15,8 @@ tick, ~17 per simulated day).
 > Inspired by Stanford's *Generative Agents* (Park et al. 2023), rebuilt for a
 > zero-budget stack and a tighter token diet.
 
+![Ghost Town — an evening gathering in the square, the town lit by the simulation clock](docs/img/map-evening.png)
+
 ---
 
 ## The map
