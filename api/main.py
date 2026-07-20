@@ -36,7 +36,18 @@ class Sim:
         self.ticking = False
 
 
-SIM = Sim()
+# Lazy singleton: creating Sim() downloads the embedding model + seeds memory,
+# which is slow. Deferring it to the first request lets uvicorn bind the port
+# immediately (so the host detects an open port), instead of blocking import.
+_sim: Sim | None = None
+
+
+def sim() -> Sim:
+    global _sim
+    if _sim is None:
+        _sim = Sim()
+    return _sim
+
 
 app = FastAPI(title="Ghost Town")
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
@@ -45,28 +56,28 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
 
 @app.get("/state")
 def get_state():
-    w = SIM.world.state()
-    r = SIM.last_report
+    w = sim().world.state()
+    r = sim().last_report
     return {
         "tick": r.tick if r else w["tick"],
         "day": r.day if r else w["day"],
         "time_slot": r.time_slot if r else w["time_slot"],
         "zones": ZONES,
         "agents": [{"id": a["id"], "name": a["name"], "occupation": a["occupation"],
-                    "position": a["position"]} for a in SIM.world.agents()],
+                    "position": a["position"]} for a in sim().world.agents()],
         "conversations": r.transcripts if r else [],
         "gossip": r.gossip if r else [],
-        "ticking": SIM.ticking,
+        "ticking": sim().ticking,
     }
 
 
 @app.get("/agents/{agent_id}")
 def get_agent(agent_id: str):
-    a = SIM.world.agent(agent_id)
+    a = sim().world.agent(agent_id)
     if a is None:
         raise HTTPException(404, "no such agent")
-    plan = SIM.last_report.planned.get(agent_id) if SIM.last_report else None
-    mems = sorted(SIM.world.memory.all(agent_id),
+    plan = sim().last_report.planned.get(agent_id) if sim().last_report else None
+    mems = sorted(sim().world.memory.all(agent_id),
                   key=lambda m: m["importance"], reverse=True)[:8]
     return {
         "id": a["id"], "name": a["name"], "occupation": a["occupation"],
@@ -74,7 +85,7 @@ def get_agent(agent_id: str):
         "plan": plan.model_dump() if plan else None,
         "memories": [{"type": m["type"], "importance": m["importance"],
                       "text": m["text"], "tick": m["tick"]} for m in mems],
-        "relationships": SIM.world.relationships(agent_id),
+        "relationships": sim().world.relationships(agent_id),
     }
 
 
@@ -85,22 +96,22 @@ class EventIn(BaseModel):
 
 @app.post("/events")
 def inject_event(ev: EventIn):
-    if ev.zone not in SIM.world.zones:
+    if ev.zone not in sim().world.zones:
         raise HTTPException(400, f"unknown zone; valid: {', '.join(ZONES)}")
-    SIM.world.inject_event(ev.zone, ev.description, source="user")
+    sim().world.inject_event(ev.zone, ev.description, source="user")
     return {"ok": True, "zone": ev.zone}
 
 
 @app.get("/story")
 def get_story():
-    return SIM.world.db.get_story()
+    return sim().world.db.get_story()
 
 
 @app.post("/tick")
 async def post_tick():
-    if SIM.ticking:
+    if sim().ticking:
         raise HTTPException(409, "a tick is already running")
-    SIM.ticking = True
+    sim().ticking = True
 
     async def stream():
         q: asyncio.Queue = asyncio.Queue()
@@ -111,9 +122,9 @@ async def post_tick():
             # `ticking` HERE (not in the stream) so a client disconnect can't
             # advance mid-tick — the tick always completes first.
             try:
-                for phase, data in run_tick_stream(SIM.world, SIM.rng, SIM.budget):
+                for phase, data in run_tick_stream(sim().world, sim().rng, sim().budget):
                     if phase == "report":
-                        SIM.last_report = data
+                        sim().last_report = data
                         payload = data.model_dump(mode="json")
                     else:
                         payload = data
@@ -121,8 +132,8 @@ async def post_tick():
             except Exception as e:  # noqa: BLE001 - report to the client, don't hang
                 loop.call_soon_threadsafe(q.put_nowait, ("error", {"detail": str(e)[:200]}))
             finally:
-                SIM.world.advance_time()   # advance AFTER the tick (like cli.py)
-                SIM.ticking = False
+                sim().world.advance_time()   # advance AFTER the tick (like cli.py)
+                sim().ticking = False
                 loop.call_soon_threadsafe(q.put_nowait, None)
 
         loop.run_in_executor(None, worker)
