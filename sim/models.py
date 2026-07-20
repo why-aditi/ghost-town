@@ -87,6 +87,7 @@ class TickReport(BaseModel):
     moves: dict[str, str] = {}          # agent_id -> destination applied
     rejected: list[str] = []            # agent_ids whose plan was rejected/defaulted
     conversations: list[tuple[str, str]] = []
+    transcripts: list[dict] = []        # {a,b,zone,gossip,lines,transfers} per dialogue
     gossip: list[str] = []              # "<learner> learned: <fact>" this tick
     reflections: list[str] = []         # "<agent>: <belief>" at day-end
     narration: str = ""

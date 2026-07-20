@@ -99,8 +99,9 @@ function Character({ x, y, color, name, selected, delay, onClick }:
 }
 
 export default function TownMap({
-  state, selected, onSelect,
-}: { state: State; selected: string | null; onSelect: (id: string) => void }) {
+  state, selected, onSelect, onConversation,
+}: { state: State; selected: string | null; onSelect: (id: string) => void;
+     onConversation: (c: State["conversations"][number]) => void }) {
   // cluster agents at each zone's gathering point
   const byZone: Record<string, Agent[]> = {};
   for (const a of state.agents) (byZone[a.position] ||= []).push(a);
@@ -169,17 +170,18 @@ export default function TownMap({
         if (!pa || !pb) return null;
         const mx = (pa.x + pb.x) / 2, my = Math.min(pa.y, pb.y) - 26;
         return (
-          <g key={i} className="pop">
+          <g key={i} className="pop" style={{ cursor: "pointer" }}
+            onClick={(e) => { e.stopPropagation(); onConversation(c); }}>
             {c.gossip && <>
               <circle className="ripple" cx={mx} cy={my + 20} fill="none" stroke="#ffcf70" strokeWidth={2} />
               <path className="whisper" d={`M${pa.x},${pa.y - 10} Q${mx},${my - 8} ${pb.x},${pb.y - 10}`}
                 fill="none" stroke="#ffd27a" strokeWidth={2.5} />
             </>}
             <g transform={`translate(${mx}, ${my})`}>
-              <rect x={-16} y={-14} width={32} height={24} rx={9}
+              <rect x={-18} y={-15} width={36} height={26} rx={10}
                 fill={c.gossip ? "#fff3d6" : "#fbf6ea"} stroke="#4a3f30" strokeWidth={1.5} />
-              <polygon points="-4,9 4,9 0,17" fill={c.gossip ? "#fff3d6" : "#fbf6ea"} stroke="#4a3f30" strokeWidth={1.5} />
-              <text y={2} textAnchor="middle" fontSize={13}>{c.gossip ? "🤫" : "💬"}</text>
+              <polygon points="-4,10 4,10 0,18" fill={c.gossip ? "#fff3d6" : "#fbf6ea"} stroke="#4a3f30" strokeWidth={1.5} />
+              <text y={2} textAnchor="middle" fontSize={14}>{c.gossip ? "🤫" : "💬"}</text>
             </g>
           </g>
         );

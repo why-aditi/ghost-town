@@ -87,6 +87,9 @@ def _build_report(tick_ctx, final, reflections, calls) -> TickReport:
         tick=tick_ctx["tick"], time_slot=tick_ctx["time_slot"], day=tick_ctx["day"],
         planned=final["plans"], moves=final["moves"], rejected=final["rejected"],
         conversations=[tuple(d.participants) for d in final["dialogues"]],
+        transcripts=[{"a": d.participants[0], "b": d.participants[1], "zone": d.zone,
+                      "gossip": bool(d.transfers), "lines": d.exchanges,
+                      "transfers": d.transfers} for d in final["dialogues"]],
         gossip=[f"{learner} learned: {fact}" for d in final["dialogues"]
                 for learner, facts in d.transfers.items() for fact in facts],
         reflections=[f"{aid}: {belief}" for aid, belief in reflections],

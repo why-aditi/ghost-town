@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Controls from "@/components/Controls";
+import ConversationDialog from "@/components/ConversationDialog";
 import EventBox from "@/components/EventBox";
 import Inspector from "@/components/Inspector";
 import StoryLog from "@/components/StoryLog";
 import TownMap from "@/components/TownMap";
 import {
-  AgentDetail, State, StoryEntry,
+  AgentDetail, Conversation, State, StoryEntry,
   getAgent, getState, getStory, injectEvent, streamTick,
 } from "@/lib/api";
 
@@ -18,6 +19,7 @@ export default function Page() {
   const [phase, setPhase] = useState<string | null>(null);
   const [autoplay, setAutoplay] = useState(false);
   const [whisper, setWhisper] = useState<string | null>(null);
+  const [convo, setConvo] = useState<Conversation | null>(null);
   const ticking = state?.ticking ?? false;
 
   const refresh = useCallback(async () => {
@@ -82,7 +84,8 @@ export default function Page() {
 
       <div className="flex min-h-0 flex-1">
         <section className="relative flex min-w-0 flex-1 items-center justify-center p-4">
-          <TownMap state={state} selected={selected} onSelect={setSelected} />
+          <TownMap state={state} selected={selected} onSelect={setSelected}
+            onConversation={setConvo} />
           {whisper && (
             <div className="pop absolute left-1/2 top-5 -translate-x-1/2 rounded-full border
               border-amber-500/50 bg-black/70 px-4 py-1.5 backdrop-blur">
@@ -99,6 +102,9 @@ export default function Page() {
 
       {selected && agent && (
         <Inspector agent={agent} onClose={() => { setSelected(null); setAgent(null); }} />
+      )}
+      {convo && (
+        <ConversationDialog convo={convo} agents={state.agents} onClose={() => setConvo(null)} />
       )}
     </main>
   );

@@ -43,12 +43,6 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
 def get_state():
     w = SIM.world.state()
     r = SIM.last_report
-    pos = {a["id"]: a["position"] for a in SIM.world.agents()}
-    # who learned a secret this tick (so the UI can ripple those conversations)
-    learners = {g.split(" learned:")[0] for g in (r.gossip if r else [])}
-    convos = [{"a": a, "b": b, "zone": pos.get(a, ""),
-               "gossip": a in learners or b in learners}
-              for a, b in (r.conversations if r else [])]
     return {
         "tick": r.tick if r else w["tick"],
         "day": r.day if r else w["day"],
@@ -56,7 +50,7 @@ def get_state():
         "zones": ZONES,
         "agents": [{"id": a["id"], "name": a["name"], "occupation": a["occupation"],
                     "position": a["position"]} for a in SIM.world.agents()],
-        "conversations": convos,
+        "conversations": r.transcripts if r else [],
         "gossip": r.gossip if r else [],
         "ticking": SIM.ticking,
     }

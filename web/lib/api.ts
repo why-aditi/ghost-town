@@ -2,7 +2,10 @@
 export const API = process.env.NEXT_PUBLIC_API || "http://127.0.0.1:8000";
 
 export type Agent = { id: string; name: string; occupation: string; position: string };
-export type Conversation = { a: string; b: string; zone: string; gossip: boolean };
+export type Conversation = {
+  a: string; b: string; zone: string; gossip: boolean;
+  lines: string[]; transfers: Record<string, string[]>;
+};
 export type State = {
   tick: number; day: number; time_slot: string; zones: string[];
   agents: Agent[]; conversations: Conversation[]; gossip: string[]; ticking: boolean;
