@@ -51,7 +51,6 @@ langgraph-sdk==0.4.2
 langsmith==0.10.6
 markdown-it-py==4.2.0
 mdurl==0.1.2
-mistralai==2.7.0
 mmh3==5.2.1
 multidict==6.7.1
 numpy==2.4.6

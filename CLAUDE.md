@@ -33,14 +33,18 @@ PRD is source of truth; if my instructions conflict with it, ask me.
 - Python 3.11.9 (`py -3.11`; the bare `python` on this box is 3.14 — don't use it)
 - Installed (exact, see requirements.txt for full lock):
   langgraph==1.2.9, langchain-core==1.4.9, chromadb==1.5.9,
-  pydantic==2.13.4, pytest==9.1.1, groq==1.5.0, mistralai==2.7.0
-- Mistral SDK entry point is `from mistralai.client import Mistral` (v2.x
-  layout — NO top-level export). Client: Mistral(api_key=).chat.complete(
-  model=, messages=[...], response_format={"type":"json_object"}).
-- OTEL PIN GOTCHA: chromadb needs the opentelemetry stack aligned at 1.44.0
-  (api+sdk+semantic-conventions==0.65b0); mistralai's semconv<0.61 pin is
-  conservative but works. On a fresh install, if chromadb import fails with
-  `_ON_EMIT_RECURSION_COUNT_KEY`, run: pip install "opentelemetry-sdk==1.44.0".
+  pydantic==2.13.4, pytest==9.1.1, groq==1.5.0. Python pinned via .python-version
+  (3.11.9) so Render/CI don't default to 3.14.
+- MISTRAL via raw HTTP (httpx), NOT the mistralai SDK. sim/llm/client._mistral
+  POSTs the OpenAI-compatible https://api.mistral.ai/v1/chat/completions. Reason:
+  mistralai 2.7.0 pins opentelemetry-semantic-conventions<0.61, which conflicts
+  with chromadb's 0.65b0 and makes `pip install -r requirements.txt` unresolvable
+  on a clean machine (it only "worked" locally via a forced install). httpx is
+  already a dep; dropping the SDK removes the conflict for good.
+- OTEL: chromadb needs the opentelemetry stack aligned at 1.44.0 (api+sdk+
+  semantic-conventions==0.65b0) — now conflict-free since mistralai is gone. If a
+  fresh install ever fails with `_ON_EMIT_RECURSION_COUNT_KEY`, that's an api/sdk
+  version mismatch; align all otel packages to 1.44.0.
 - chroma EmbeddingFunction interface (1.5.x): __call__ + embed_query + static
   name() + get_config(); default embeddings download all-MiniLM-L6-v2 (~80MB)
   to ~/.cache/chroma on first real run. Tests inject a fake embedder.

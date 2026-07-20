@@ -40,17 +40,22 @@ _load_dotenv()
 
 # --- provider wrappers: (text, tokens) ---
 def _mistral(prompt: str, model: str, temperature: float, json_mode: bool):
-    from mistralai.client import Mistral
+    # Raw HTTP (OpenAI-compatible) instead of the mistralai SDK — the SDK pins
+    # opentelemetry-semantic-conventions <0.61, which conflicts with chromadb's
+    # 0.65b0 and makes `pip install -r requirements.txt` unresolvable.
+    import httpx
     key = os.getenv("MISTRAL_API_KEY")
     if not key:
         raise LLMUnavailable("MISTRAL_API_KEY not set")
-    client = Mistral(api_key=key)
-    kw = {"response_format": {"type": "json_object"}} if json_mode else {}
-    r = client.chat.complete(
-        model=model, temperature=temperature,
-        messages=[{"role": "user", "content": prompt}], **kw)
-    tokens = getattr(getattr(r, "usage", None), "total_tokens", None)
-    return r.choices[0].message.content, tokens
+    body = {"model": model, "temperature": temperature,
+            "messages": [{"role": "user", "content": prompt}]}
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    r = httpx.post("https://api.mistral.ai/v1/chat/completions",
+                   headers={"Authorization": f"Bearer {key}"}, json=body, timeout=60)
+    r.raise_for_status()   # raises on 429/5xx -> str contains the code (rate-limit fast-fail works)
+    data = r.json()
+    return data["choices"][0]["message"]["content"], data.get("usage", {}).get("total_tokens")
 
 
 def _groq(prompt: str, model: str, temperature: float, json_mode: bool):
