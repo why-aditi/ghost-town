@@ -4,11 +4,44 @@
 
 html, body {
   height: 100%;
-  background: #09090b;      /* zinc-950 */
-  color: #e4e4e7;          /* zinc-200 */
+  background: #17140f;            /* warm near-black */
+  color: #efe7d6;                /* parchment */
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+.font-display { font-family: var(--font-display), serif; }
+.font-hand    { font-family: var(--font-hand), cursive; }
+.font-serif   { font-family: var(--font-serif), Georgia, serif; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #4a3f30; border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* --- character idle bob (per-agent delay set inline) --- */
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+.bob { animation: bob 2.4s ease-in-out infinite; }
+
+/* --- speech bubble pop-in --- */
+@keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+.pop { animation: pop 0.35s cubic-bezier(.34,1.56,.64,1) both; transform-origin: bottom center; }
+
+/* --- gossip ripple ring --- */
+@keyframes ripple { 0% { r: 6; opacity: 0.9; } 100% { r: 46; opacity: 0; } }
+.ripple { animation: ripple 1.6s ease-out infinite; }
+
+/* --- whisper dash traveling along the gossip arc --- */
+@keyframes dash { to { stroke-dashoffset: -24; } }
+.whisper { stroke-dasharray: 3 5; animation: dash 0.7s linear infinite; }
+
+/* --- fireflies at dusk --- */
+@keyframes drift {
+  0%   { transform: translate(0,0); opacity: 0; }
+  25%  { opacity: 0.9; }
+  50%  { transform: translate(14px,-18px); opacity: 0.5; }
+  100% { transform: translate(-6px,-34px); opacity: 0; }
+}
+.firefly { animation: drift 5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bob, .ripple, .whisper, .firefly { animation: none; }
+}
