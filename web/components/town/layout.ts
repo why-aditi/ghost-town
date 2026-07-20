@@ -30,12 +30,24 @@ export const PALETTE = ["#e05a4d", "#e0a63c", "#4fae6d", "#4f92d6",
                         "#a172d6", "#dd6fa8", "#3fb0a5", "#8fbc42"];
 
 // Deterministic cluster slot for agent index `i` of `count` at a zone.
+// deterministic 0..1 hash so each agent keeps a stable personal offset
+const jitter = (n: number) => {
+  const s = Math.sin(n * 127.1) * 43758.5453;
+  return s - Math.floor(s);
+};
+
 export function slotFor(zone: string, i: number, count: number): { x: number; y: number } {
   const g = Z[zone] ?? Z.square;
-  const per = zone === "square" ? 4 : 3;       // the square is roomy; buildings tighter
+  const per = zone === "square" ? 4 : 3;         // the square is roomy; buildings tighter
   const cols = Math.min(count, per);
   const col = i % per, row = Math.floor(i / per);
-  return { x: g.gx + (col - (cols - 1) / 2) * 50, y: g.gy + row * 50 };
+  const stagger = (row % 2) * 26;                // brick-offset alternate rows
+  const jx = (jitter(i * 7 + 1) - 0.5) * 14;     // organic scatter, stable per agent
+  const jy = (jitter(i * 7 + 4) - 0.5) * 12;
+  return {
+    x: g.gx + (col - (cols - 1) / 2) * 52 + stagger - 13 + jx,
+    y: g.gy + row * 48 + jy,
+  };
 }
 
 // Waypoints from a live position to a target slot. Cross-zone walks route
