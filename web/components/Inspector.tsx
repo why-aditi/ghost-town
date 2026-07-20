@@ -54,9 +54,15 @@ export default function Inspector({
         <ul className="mt-2 space-y-1.5">
           {agent.memories.map((m, i) => (
             <li key={i} className="flex gap-2 text-sm">
-              <span className={`mt-0.5 shrink-0 rounded px-1.5 text-[10px] uppercase leading-4
-                text-amber-50 ${typeColor[m.type] || "bg-stone-600"}`}>{m.type[0]}{m.importance}</span>
-              <span className="text-amber-50/80">{m.text}</span>
+              <span title={`${m.type} · importance ${m.importance}/10`}
+                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]
+                  font-semibold leading-none text-amber-50 ${typeColor[m.type] || "bg-stone-600"}`}>
+                {m.importance}
+              </span>
+              <span className="text-amber-50/80">
+                <span className="mr-1 text-[10px] uppercase tracking-wide text-amber-200/40">{m.type}</span>
+                {m.text}
+              </span>
             </li>
           ))}
           {agent.memories.length === 0 && <li className="text-sm text-amber-200/30">no memories yet</li>}
