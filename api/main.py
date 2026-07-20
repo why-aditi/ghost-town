@@ -9,6 +9,7 @@ just ran (positions post-move) so the UI shows "what just happened".
 """
 import asyncio
 import json
+import os
 import random
 
 from fastapi import FastAPI, HTTPException
@@ -25,7 +26,10 @@ from sim.world import World
 
 class Sim:
     def __init__(self):
-        self.world = World.new(":memory:")
+        # GHOST_DB lets a deploy persist world state to a disk path (e.g. a
+        # Render disk); default in-memory. Memory (chroma) is ephemeral either
+        # way (persistent memory = P1) and re-seeds each boot.
+        self.world = World.new(os.getenv("GHOST_DB", ":memory:"))
         self.budget = LLMBudget(config.BUDGET_PER_DAY)
         self.rng = random.Random(42)
         self.last_report = None

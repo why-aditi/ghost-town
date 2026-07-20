@@ -93,7 +93,14 @@ ghost-town/
   .env.example
 
 ## Env vars
-GROQ_API_KEY, MISTRAL_API_KEY
+GROQ_API_KEY, MISTRAL_API_KEY. Optional GHOST_DB (sqlite world-state path;
+default :memory:; memory/chroma is ephemeral regardless — persistent = P1).
+
+## Deploy (Day 7)
+API → Render free (render.yaml), web → Vercel (root=web/, NEXT_PUBLIC_API=API
+url). Free tier resets sqlite+memory on redeploy/idle-spindown and cold-starts
+~30-60s (PRD §10). Steps + caveats in DEPLOY.md; pitch/architecture/writeup in
+README.md; 2-min video shot list in DEMO.md.
 
 ## Seeding (PRD §9 Day-7 tip — bake it in from Day 1)
 8 agents with FLAMMABLE relations: merchant owes farmer money; baker and

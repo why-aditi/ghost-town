@@ -1,0 +1,26 @@
+# Render blueprint — the FastAPI backend only (the web UI goes to Vercel).
+#
+# FREE TIER CAVEATS (see PRD §10 / DEPLOY.md):
+#  - No persistent disk: sqlite world-state and the chroma memory stream are
+#    ephemeral and reset on every redeploy / idle spin-down.
+#  - Spins down after ~15 min idle → ~30-60s cold start on the next request.
+#  - First boot downloads the ~80MB embedding model (re-downloaded each boot on
+#    free tier, since the disk is ephemeral) — expect a slow first tick.
+#  - One shared in-memory simulation (fine for a demo; not multi-user).
+#
+# For persistence, upgrade to a paid instance, attach a disk, and set
+# GHOST_DB to a path on it (world state persists; memory stays ephemeral = P1).
+services:
+  - type: web
+    name: ghost-town-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: GROQ_API_KEY
+        sync: false        # set in the Render dashboard
+      - key: MISTRAL_API_KEY
+        sync: false

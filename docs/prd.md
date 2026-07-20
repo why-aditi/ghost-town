@@ -77,14 +77,14 @@ flowchart TB
     TICK --> NARR[Narrator summary<br/>1 LLM call]
     MEM --> VDB[(ChromaDB<br/>memory embeddings)]
     TICK --> STATE[(SQLite/Supabase<br/>world state, agents, log)]
-    PLAN & CONV & NARR --> LLM[Groq / Gemini free tier]
+    PLAN & CONV & NARR --> LLM[Groq llama-3.3-70b + Mistral small, free tiers]
 ```
 
 ### 6.2 The token-budget trick (the core engineering story)
 
 Naive design = 1 LLM call per agent per tick per phase → 8 agents × 3 phases × 20 ticks/day ≈ 500 calls/day. Free tiers die.
 
-**Batched-mind design:** one *planning* call handles ALL agents per tick — the prompt contains each agent's compressed persona + top-3 retrieved memories + current world snapshot, and JSON-mode output returns every agent's `{destination, action, reason}` in one response. Conversations stay per-pair (they need dialogue quality), and the narrator is one call. Result: **~4–6 LLM calls per tick, ~30–60/day** — comfortably inside Groq/Gemini free tiers.
+**Batched-mind design:** one *planning* call handles ALL agents per tick — the prompt contains each agent's compressed persona + top-3 retrieved memories + current world snapshot, and JSON-mode output returns every agent's `{destination, action, reason}` in one response. Conversations stay per-pair (they need dialogue quality), and the narrator is one call. Result: **~2–6 LLM calls per tick, measured ~17/day** — comfortably inside Groq/Mistral free tiers. (Built with Mistral for planning/scoring, not Gemini — see §13.)
 
 Trade-off acknowledged: batching risks cross-agent bleed (agents "knowing" others' private plans). Mitigate with strict per-agent sections in the prompt and a validation pass that rejects actions referencing unknown information. This trade-off discussion is gold in interviews.
 
@@ -110,11 +110,11 @@ Plain SQLite (or Supabase if you want cloud persistence) holds: agents (persona,
 | Layer | Choice | Why |
 |-------|--------|-----|
 | Orchestration | **LangGraph** (per-tick graph: plan → act → converse → remember → narrate) | Deterministic phases, retries, checkpointed state |
-| LLM | **Groq free tier** (Llama 3.3 70B) for dialogue speed; **Gemini flash** for batch planning/scoring | Split by strength; two free tiers = 2× headroom |
+| LLM | **Groq free tier** (Llama 3.3 70B) for dialogue + narrator; **Mistral** (mistral-small) for batch planning/scoring/reflection | Split by strength; two free tiers = 2× headroom + fallback |
 | Memory | **ChromaDB** (local, free) with default embeddings | Zero-setup vector store |
 | World DB | **SQLite** (dev) → optional Supabase | Simplicity first |
 | Backend | **FastAPI** + SSE for tick streaming | Familiar |
-| Frontend | **Next.js + Tailwind**, SVG map (skip Phaser — a game engine is overkill for zone-teleport movement) | Ship in 2 days, not 4 |
+| Frontend | **Next.js 14 + Tailwind**, raw `<canvas>` game renderer (pixel-art sprites, walk animation; no game engine) | Game feel without Phaser; see §13 |
 | Hosting | Vercel (UI) + Render (API) free tiers; ChromaDB/SQLite on Render disk | ₹0 |
 
 ## 8. Data Model
@@ -168,3 +168,28 @@ conversations(id, tick, zone, participants text[], transcript jsonb, transfers j
 - The batched-mind pattern: 10× LLM-call reduction, its failure modes, and the validation layer that guards them.
 - Information-as-memory design making gossip *mechanically real* rather than prompted.
 - LLM-proposes / code-disposes: why the world state is authoritative in Python, not in the model.
+
+## 13. Implementation notes (as-built, Day 7)
+
+Deviations from the original vision above, and why:
+
+- **LLM providers:** planning/scoring/reflection use **Mistral** (`mistral-small-latest`),
+  not Gemini — the Gemini free tier returned `limit: 0` on that project. Dialogue +
+  narrator use Groq (`llama-3.3-70b-versatile`). The client has backoff, cross-provider
+  fallback (groq↔mistral) with fast-fail on rate limits, and the per-day budget counter.
+- **Budget, measured:** ~2–6 calls/tick; a full simulated day (3 ticks + 1 reflection) ≈
+  **17 calls**, well under the 60/day cap. The cap still degrades to "quiet ticks".
+- **Memory is ephemeral in v1.** ChromaDB's persistent client crashes on query with an
+  HNSW "Nothing found on disk" race under real timing (Windows), so memory lives
+  in-process and **re-seeds each boot**. Persistent memory (save/load) = P1. `--db`/`GHOST_DB`
+  persists sqlite *world* state only.
+- **Frontend is a `<canvas>` game renderer**, not SVG: pixel-art village, occupation-identifiable
+  characters that walk the paths and gather, time-of-day lighting, clickable characters
+  (inspector) and speech bubbles (dialogue transcript + what spread). Still no game engine.
+- **Emergence knobs** (all in `sim/config.py` / `sim/personas.py`): an evening-gathering
+  planning nudge (the town converges on the square) creates the co-location gossip needs; a
+  pairing cooldown pushes gossip to new ears; transfer grounding + dedup keep it honest.
+- **Tick model:** 3 ticks/day (morning/afternoon/evening); reflections fire at the evening tick.
+- **Dependency gotchas** worth knowing: chromadb needs the OpenTelemetry stack aligned at
+  1.44.0; chroma default embeddings download ~80MB (all-MiniLM) on first real run; the Mistral
+  SDK v2 entry point is `from mistralai.client import Mistral`. Full details in CLAUDE.md.

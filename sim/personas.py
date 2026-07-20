@@ -33,7 +33,7 @@ AGENTS = [
         "occupation": "merchant",
         "home_zone": "homes",
         "traits": ["shrewd", "evasive"],
-        "daily_goals": ["sell goods at the market", "avoid Bram"],
+        "daily_goals": ["sell goods at the market", "keep well away from Bram, who I owe money to"],
         "secrets": ["I cannot actually repay the money I owe Bram."],
         "sociability": 0.5,
         "initial_relationships": [
@@ -47,7 +47,7 @@ AGENTS = [
         "occupation": "farmer",
         "home_zone": "homes",
         "traits": ["blunt", "patient"],
-        "daily_goals": ["tend the farm", "get Silas to repay his debt"],
+        "daily_goals": ["tend the farm", "track down Silas and demand the money he owes me"],
         "secrets": [],
         "sociability": 0.4,
         "initial_relationships": [
@@ -61,7 +61,7 @@ AGENTS = [
         "occupation": "baker",
         "home_zone": "homes",
         "traits": ["warm", "competitive"],
-        "daily_goals": ["bake bread", "win Mira's affection"],
+        "daily_goals": ["bake fresh bread", "win Mira's heart before Rurik does"],
         "secrets": [],
         "sociability": 0.6,
         "initial_relationships": [
@@ -77,7 +77,7 @@ AGENTS = [
         "occupation": "blacksmith",
         "home_zone": "homes",
         "traits": ["gruff", "competitive"],
-        "daily_goals": ["work the forge", "win Mira's affection"],
+        "daily_goals": ["work the forge", "win Mira's heart before Elara does"],
         "secrets": [],
         "sociability": 0.5,
         "initial_relationships": [
@@ -107,9 +107,9 @@ AGENTS = [
         "occupation": "well-keeper",
         "home_zone": "homes",
         "traits": ["quiet", "watchful"],
-        "daily_goals": ["mind the well", "keep the mine secret"],
+        "daily_goals": ["mind the well", "keep quiet about what I saw at the old mine"],
         "secrets": ["The old mine didn't collapse by accident — I saw who did it."],
-        "sociability": 0.4,
+        "sociability": 0.5,
         "initial_relationships": [],
     },
     {
