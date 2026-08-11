@@ -62,9 +62,18 @@ export default function Page() {
     }
   }, [state?.tick, state?.gossip]);
 
+  // ponytail: poll while a tick runs so a dropped SSE stream (Render proxy)
+  // can't strand the UI stale — /state.ticking flips false when the server is done
+  useEffect(() => {
+    if (!ticking) return;
+    const t = setInterval(refresh, 4000);
+    return () => clearInterval(t);
+  }, [ticking, refresh]);
+
   const doTick = useCallback(async () => {
     if (state?.ticking) return;
     setState((s) => (s ? { ...s, ticking: true } : s));
+    setPhase("waking the town…"); // visible during Render cold start, before first SSE byte
     try {
       await streamTick((ev, data) => setPhase(data.label || ev));
     } catch (e: any) {
